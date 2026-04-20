@@ -13,27 +13,86 @@ import locale
 import os
 import shutil
 import stat
+import sys
 import time
 from pathlib import Path
 
 
+def _chmod_tree_writable(root: Path) -> None:
+    """Walk *root* and restore owner-writable modes.
+
+    Read-only directories block their own contents from being unlinked;
+    read-only files resist unlink on Windows. Pre-walking is the most
+    robust fix: by the time ``shutil.rmtree`` starts, every entry is
+    already writable, so its ``onexc`` handler only needs to catch
+    surprises (races, concurrent access). os.walk(topdown=True) lets us
+    chmod a directory *before* we try to descend into it.
+
+    Best-effort: chmod errors are swallowed. The subsequent rmtree will
+    surface any genuine failure.
+    """
+    try:
+        os.chmod(root, stat.S_IRWXU)
+    except OSError:
+        pass
+    for dirpath, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
+        for name in dirnames:
+            try:
+                os.chmod(os.path.join(dirpath, name), stat.S_IRWXU)
+            except OSError:
+                pass
+        for name in filenames:
+            try:
+                os.chmod(os.path.join(dirpath, name), stat.S_IWRITE | stat.S_IREAD)
+            except OSError:
+                pass
+
+
 def _force_remove(path: Path) -> None:
-    """Remove a file or directory tree, tolerating read-only Windows files.
+    """Remove a file or directory tree, tolerating read-only entries.
 
     Windows refuses to delete files flagged FILE_ATTRIBUTE_READONLY; the
-    unlink/rmtree syscall raises PermissionError. We flip the write bit
-    and retry. Symlinks are unlinked directly — never recursed into.
+    unlink/rmtree syscall raises PermissionError. The same trap exists
+    on POSIX for read-only directories (missing owner-write bit): the
+    dir's own entries cannot be unlinked until the dir itself has write.
+
+    Strategy: pre-walk the tree and restore writable modes, then call
+    rmtree. An ``onexc``/``onerror`` handler still runs as a safety net
+    for races (a file becoming read-only between our pre-walk and
+    rmtree's unlink). Symlinks are unlinked directly — never recursed
+    into.
+
+    Python 3.12 renamed ``shutil.rmtree(onerror=...)`` to
+    ``shutil.rmtree(onexc=...)`` with a slightly different callback
+    signature: ``onexc(func, path, exc)`` vs the legacy
+    ``onerror(func, path, exc_info)``. Passing ``onerror=`` on 3.12+
+    emits ``DeprecationWarning``, which breaks any CI that runs under
+    ``filterwarnings = error``. Branch on version; share the body.
     """
 
-    def onerror(func, p, _exc):  # type: ignore[no-untyped-def]
+    def _handler(func, p):  # type: ignore[no-untyped-def]
+        mode = stat.S_IRWXU if os.path.isdir(p) else stat.S_IWRITE
         try:
-            os.chmod(p, stat.S_IWRITE | stat.S_IREAD)
-            func(p)
+            os.chmod(p, mode)
         except OSError:
-            raise
+            pass
+        if func in (os.unlink, os.rmdir, os.remove):
+            func(p)
 
     if path.is_dir() and not path.is_symlink():
-        shutil.rmtree(path, onerror=onerror)
+        _chmod_tree_writable(path)
+        if sys.version_info >= (3, 12):
+
+            def onexc(func, p, _exc):  # type: ignore[no-untyped-def]
+                _handler(func, p)
+
+            shutil.rmtree(path, onexc=onexc)
+        else:
+
+            def onerror(func, p, _exc_info):  # type: ignore[no-untyped-def]
+                _handler(func, p)
+
+            shutil.rmtree(path, onerror=onerror)
     elif path.exists() or path.is_symlink():
         try:
             path.unlink()

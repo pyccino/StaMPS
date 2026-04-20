@@ -200,3 +200,35 @@ def test_long_path_forward_slash_unc_windows():
     assert got.startswith(
         "\\\\?\\UNC\\server\\share\\"
     ), f"Expected \\\\?\\UNC\\server\\share\\... prefix, got: {got!r}"
+
+
+def test_rm_rf_glob_handles_readonly_directory(tmp_path: Path):
+    """rm_rf_glob must remove a directory that itself has read-only mode.
+
+    A parent dir whose permission bits are S_IREAD (no write) can still
+    be unlinked on POSIX when its own parent is writable, but shutil.rmtree
+    will hit PermissionError while trying to remove the entries inside if
+    the dir also lacks write permission. On Windows, a directory with
+    FILE_ATTRIBUTE_READONLY can resist deletion outright. The handler
+    must chmod+retry so the dir goes away regardless.
+    """
+    # Pattern depth check needs ≥3 absolute-path components.
+    deep_parent = tmp_path / "a" / "b"
+    deep_parent.mkdir(parents=True)
+
+    ro_dir = deep_parent / "ro_dir"
+    ro_dir.mkdir()
+    # Populate it so rmtree has actual work to do under the read-only bit.
+    (ro_dir / "inside.txt").write_text("x")
+    # Strip write permission from the directory itself.
+    os.chmod(ro_dir, stat.S_IREAD | stat.S_IEXEC)
+
+    try:
+        rm_rf_glob(deep_parent / "ro_*")
+    finally:
+        # Restore perms so tmp_path cleanup never blocks, even if the
+        # assertion below fires.
+        if ro_dir.exists():
+            os.chmod(ro_dir, stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
+
+    assert not ro_dir.exists()
