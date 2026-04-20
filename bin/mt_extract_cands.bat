@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 rem StaMPS Windows shim: delegates to the Python port.
 rem See mt_prep_snap.bat for design notes.
 
@@ -12,19 +13,19 @@ if exist "%APPDATA%\PHASE\python.txt" set /p STAMPS_PYTHON=<"%APPDATA%\PHASE\pyt
 
 if defined STAMPS_PYTHON (
     "%STAMPS_PYTHON%" -m stamps.mt_extract_cands %*
-    exit /b %ERRORLEVEL%
+    exit /b !ERRORLEVEL!
 )
 
 where py >nul 2>&1
-if %ERRORLEVEL%==0 (
+if !ERRORLEVEL! equ 0 (
     py -3 -m stamps.mt_extract_cands %*
-    exit /b %ERRORLEVEL%
+    exit /b !ERRORLEVEL!
 )
 
 where python >nul 2>&1
-if %ERRORLEVEL%==0 (
+if !ERRORLEVEL! equ 0 (
     python -m stamps.mt_extract_cands %*
-    exit /b %ERRORLEVEL%
+    exit /b !ERRORLEVEL!
 )
 
 echo ERROR: No Python 3.11+ found. Install from https://www.python.org >&2

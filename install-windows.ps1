@@ -19,8 +19,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 # --- Prerequisite: detect WSL context and abort ---
+# $ErrorActionPreference = "Stop" below makes Write-Error terminate the
+# script with exit code 1 before our explicit `exit 2` runs. We want
+# a specific exit code per failure mode, so write via Host + explicit exit.
 if ($env:WSL_DISTRO_NAME -or (Test-Path "/proc/version" -ErrorAction SilentlyContinue)) {
-    Write-Error "Running inside WSL. Use the Linux install flow, not install-windows.ps1."
+    [Console]::Error.WriteLine("ERROR: Running inside WSL. Use the Linux install flow, not install-windows.ps1.")
     exit 2
 }
 
@@ -54,7 +57,7 @@ if ($InstallDir -cnotmatch '^[\x20-\x7E]+$') {
 if ([string]::IsNullOrWhiteSpace($Repo)) {
     $gitCmd = Get-Command git -ErrorAction SilentlyContinue
     if (-not $gitCmd) {
-        Write-Error "git not on PATH and -Repo not specified. Pass -Repo '<owner>/<name>'."
+        [Console]::Error.WriteLine("ERROR: git not on PATH and -Repo not specified. Pass -Repo '<owner>/<name>'.")
         exit 1
     }
     $remoteUrl = & git -C $PSScriptRoot config --get remote.fork.url 2>$null
@@ -65,7 +68,7 @@ if ([string]::IsNullOrWhiteSpace($Repo)) {
         $Repo = $Matches[1]
         Write-Host "Auto-detected repo slug from git remote: $Repo"
     } else {
-        Write-Error "Cannot determine GitHub repo slug. Pass -Repo '<owner>/<name>'."
+        [Console]::Error.WriteLine("ERROR: Cannot determine GitHub repo slug. Pass -Repo '<owner>/<name>'.")
         exit 1
     }
 }
