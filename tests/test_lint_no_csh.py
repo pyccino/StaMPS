@@ -35,13 +35,20 @@ def test_no_csh_idioms_in_patched_m_files(stamps_root: Path):
 
 
 def test_no_csh_shebang_in_snap_path_bin(stamps_root: Path):
-    """Shims under bin/ must not reintroduce csh. bin/legacy-csh/ is exempt."""
+    """SNAP-path shims (mt_prep_snap, mt_extract_cands) must not be csh.
+
+    bin/ also contains many non-SNAP-path scripts (mt_prep_gamma,
+    mt_prep_doris, step_master_read, remake_slcs, etc.) which remain
+    csh because they target other preprocessors and are explicitly OUT
+    of scope for the Windows port. Only the two shims the port replaces
+    are asserted here.
+    """
+    SNAP_PATH_SHIMS = {"mt_prep_snap", "mt_extract_cands"}
     violations = []
-    for p in (stamps_root / "bin").iterdir():
-        if p.is_dir() or p.name.endswith(".bat"):
-            continue
-        if "legacy-csh" in str(p):
-            continue
+    for name in SNAP_PATH_SHIMS:
+        p = stamps_root / "bin" / name
+        if not p.exists():
+            continue  # not-yet-created shim (pre-flip state)
         try:
             first = p.read_text(encoding="utf-8", errors="replace").splitlines()[0]
         except (IndexError, OSError):

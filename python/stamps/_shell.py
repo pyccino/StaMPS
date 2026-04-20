@@ -51,14 +51,19 @@ def rm_rf_glob(pattern: Path | str, retries: int = 3,
             break
         base_parts.append(part)
     base = Path(*base_parts) if base_parts else Path(p.anchor or "/")
+    # Depth check on BOTH the raw absolute base and its resolved form. resolve()
+    # can lengthen a path via autofs/firmlinks (macOS `/home` → multi-level
+    # synthetic mount under /System/Volumes/...) and mask an actually-shallow
+    # pattern. Checking both the raw and resolved parts means we're never less
+    # strict than the caller's literal intent.
+    raw_parts = base.parts
     try:
-        resolved = base.resolve()
+        resolved_parts = base.resolve().parts
     except (OSError, RuntimeError):
-        resolved = base
-    # Depth-from-root check: must be at least 3 levels deep.
-    if len(resolved.parts) < 3:
+        resolved_parts = raw_parts
+    if len(raw_parts) < 3 or len(resolved_parts) < 3:
         raise ValueError(
-            f"refusing to rm_rf_glob at shallow path (depth<3): {resolved}")
+            f"refusing to rm_rf_glob at shallow path (depth<3): {base}")
 
     for victim in sorted_glob(p):
         for attempt in range(retries):

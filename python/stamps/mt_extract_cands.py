@@ -4,6 +4,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from ._log import banner, blank_line
 from ._paths import resolve_bin
@@ -12,7 +13,7 @@ from ._paths import resolve_bin
 AUTHOR = "Andy Hooper, Jan 2007"
 
 
-def _parse_args(argv: list[str]) -> dict:
+def _parse_args(argv: list[str]) -> dict[str, Any]:
     """Matches csh: argc==0 → all four flags = 1; argc≥1 → only args win, rest 0."""
     defaults = {"dophase": 0, "dolonlat": 0, "dodem": 0, "docands": 0,
                 "prec": "f", "byteswap": 0, "maskfile": "", "list": "patch.list"}
