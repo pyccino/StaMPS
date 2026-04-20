@@ -241,3 +241,39 @@ def test_long_path_does_not_mangle_file_uri():
     got = str(long_path(uri))
     assert "/" in got, f"forward slashes were rewritten in URI: {got!r}"
     assert "\\\\?\\" not in got, f"URI should not get \\\\?\\ prefix: {got!r}"
+
+
+@pytest.mark.windows_only
+def test_sorted_glob_case_insensitive_fs_windows(tmp_path: Path):
+    """NTFS is case-insensitive by default. Two paths `Foo.txt` and `foo.txt`
+    collapse to a single on-disk file, so sorted_glob must return exactly
+    one match rather than two — otherwise downstream callers that expect
+    distinct entries (e.g. calamp_format) will double-process the same
+    physical file.
+    """
+    (tmp_path / "Foo.txt").write_bytes(b"first")
+    # On NTFS, this either overwrites the existing file or errors; either
+    # way the final directory contains ONE file.
+    try:
+        (tmp_path / "foo.txt").write_bytes(b"second")
+    except OSError:
+        # Some NTFS configurations raise on case-variant create; ignore.
+        pass
+    result = sorted_glob(tmp_path / "*.txt")
+    assert len(result) == 1, f"expected 1 entry on case-insensitive FS, got {result!r}"
+
+
+def test_write_text_for_cpp_handles_non_ascii_path(tmp_path: Path):
+    """Paths with non-ASCII components (e.g. user directory `café/`) must
+    round-trip through write_text_for_cpp. The C++ ifstream consumes the
+    file content byte-for-byte; the path itself is opened by Python (wide
+    API on Windows, UTF-8 on POSIX), so unicode in the path is fine as
+    long as write_bytes doesn't choke on the encoding of the content.
+    """
+    subdir = tmp_path / "café"
+    subdir.mkdir()
+    target = subdir / "calamp.in"
+    write_text_for_cpp(target, "data")
+    # Readback must equal the written payload. ASCII content is invariant
+    # across locale.getpreferredencoding() on any OS.
+    assert target.read_bytes() == b"data"

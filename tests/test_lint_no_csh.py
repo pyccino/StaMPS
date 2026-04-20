@@ -148,3 +148,51 @@ def test_lint_negative_csh_shebang_detection(tmp_path: Path):
     assert first.startswith("#!/bin/csh"), (
         "Self-test scanner failed to detect csh shebang — " "the real scanner would also miss it."
     )
+
+
+def lint_file(path: Path) -> list[str]:
+    """Return a list of violation strings for a single .m file.
+
+    Helper shared with ``test_lint_fires_on_injected_system_call`` below.
+    Kept separate from ``test_no_csh_idioms_in_patched_m_files`` (which
+    inlines the scan loop) to avoid overlapping edits with other agents
+    touching this file — this helper is purely additive.
+    """
+    violations: list[str] = []
+    text = path.read_text(encoding="utf-8", errors="replace")
+    for pattern, message in FORBIDDEN_IN_MATLAB:
+        for m in pattern.finditer(text):
+            line_no = text.count("\n", 0, m.start()) + 1
+            violations.append(f"{path.name}:{line_no}: {message}")
+    return violations
+
+
+def test_lint_fires_on_injected_system_call(tmp_path: Path):
+    """Fixture-injection negative test: write a tmp .m file containing a
+    known-bad ``system('\\rm ...')`` call and verify ``lint_file`` reports
+    at least one violation. Protects the lint machinery itself — if
+    ``FORBIDDEN_IN_MATLAB`` gets silently weakened (e.g. patterns deleted
+    or broadened), this test fires.
+
+    Uses the ``system('\\rm ...')`` idiom because it matches the existing
+    pattern ``r"system\\('\\\\rm"`` without requiring changes to the
+    production pattern list (other agents may be editing it).
+    """
+    bad = tmp_path / "injected.m"
+    bad.write_text(
+        "function y = dirty(x)\n"
+        "  system('\\rm -rf /tmp/test');\n"  # matches \\rm pattern
+        "  y = x;\n"
+        "end\n",
+        encoding="utf-8",
+    )
+    violations = lint_file(bad)
+    assert len(violations) >= 1, (
+        f"lint_file failed to flag injected system('\\rm ...') call in {bad}. "
+        f"FORBIDDEN_IN_MATLAB may have regressed."
+    )
+    # Strengthen: the matched message should reference delete() — the
+    # intended replacement for system('\\rm ...').
+    assert any(
+        "delete()" in v for v in violations
+    ), f"Expected at least one violation to recommend delete(); got {violations!r}"

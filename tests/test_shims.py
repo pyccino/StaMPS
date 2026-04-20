@@ -153,6 +153,45 @@ def test_bat_passes_utf8_args(stamps_root: Path, tmp_path: Path):
     env["APPDATA"] = str(appdata)
     proc = subprocess.run(
         [str(shim), "20200101", non_ascii],
+
+def test_bat_propagates_nonzero_exit_code(stamps_root: Path, tmp_path: Path):
+    """Regression for commit 2683fe1: ``%ERRORLEVEL%`` inside an ``if (...)``
+    block is expanded at parse-time, giving the pre-call value (usually 0).
+    ``!ERRORLEVEL!`` with ``setlocal enabledelayedexpansion`` expands at
+    runtime.
+
+    Verifies arbitrary nonzero exit codes (not just 4-via-usage) propagate
+    through the .bat shim. We point STAMPS_PYTHON at a wrapper .cmd that
+    runs a stub Python script calling ``sys.exit(42)``. The shim must
+    return exit 42 verbatim — not 0 (the parse-time bug) or 1 (generic
+    failure). Exercises the ``!ERRORLEVEL!`` passthrough inside the
+    ``if defined STAMPS_PYTHON (...)`` block.
+    """
+    import sys
+
+    stub_script = tmp_path / "stub_exit42.py"
+    stub_script.write_text("import sys\nsys.exit(42)\n", encoding="ascii")
+    # Wrapper .cmd that invokes the real Python on our stub and propagates
+    # its exit code. Uses %ERRORLEVEL% (parse-time) since the exit is at
+    # top level, not inside an if/for block — parse-time expansion is
+    # correct here. No setlocal needed.
+    wrapper = tmp_path / "python_wrapper.cmd"
+    wrapper.write_text(
+        f'@echo off\r\n"{sys.executable}" "{stub_script}"\r\nexit /b %ERRORLEVEL%\r\n',
+        encoding="ascii",
+    )
+    # The shim reads STAMPS_PYTHON from %APPDATA%\PHASE\python.txt. Point
+    # APPDATA at tmp_path so we don't touch the real user profile.
+    appdata = tmp_path / "appdata"
+    (appdata / "PHASE").mkdir(parents=True)
+    (appdata / "PHASE" / "python.txt").write_text(str(wrapper), encoding="ascii")
+
+    env = os.environ.copy()
+    env["APPDATA"] = str(appdata)
+
+    shim = stamps_root / "bin" / "mt_prep_snap.bat"
+    proc = subprocess.run(
+        [str(shim), "20200101", str(tmp_path)],
         capture_output=True,
         timeout=30,
         env=env,
@@ -168,3 +207,12 @@ def test_bat_passes_utf8_args(stamps_root: Path, tmp_path: Path):
     assert (
         proc.stderr == expected
     ), f"argv byte mismatch: expected {expected!r}, got {proc.stderr!r}"
+
+    # If the shim regresses to parse-time %ERRORLEVEL%, we'd see 0. If it
+    # somehow bypasses STAMPS_PYTHON and falls back to `py`/`python` on
+    # PATH, we'd see 4 (usage). Require exactly 42 — the stub's exit code.
+    assert proc.returncode == 42, (
+        f"Expected exit 42 from stub, got {proc.returncode}. "
+        f"If 0: !ERRORLEVEL! parse-time bug regressed. "
+        f"stderr={proc.stderr!r} stdout={proc.stdout!r}"
+    )
