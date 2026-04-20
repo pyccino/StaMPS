@@ -130,6 +130,18 @@ jobs:
       - name: Run all hooks
         run: pre-commit run --all-files --show-diff-on-failure
 
+  linux-csh-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - run: sudo apt-get install -y tcsh gawk cmake
+      - run: cmake -S src -B build && cmake --build build
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with: { python-version: "3.11" }
+      - run: |
+          # Re-capture into a scratch dir and diff against committed goldens
+          bash tests/golden/capture.sh --verify-only
+
   # VS 2026 early-test (GitHub Actions transitions windows-latest to this
   # around May 2026). Update runner label + generator once transitioned.
   build-windows-vs2026:
