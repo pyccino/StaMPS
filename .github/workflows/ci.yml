@@ -12,12 +12,23 @@ concurrency:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    # Pin to ubuntu-24.04 (Noble) explicitly: it ships gcc-13 in the default
+    # universe repo, so no PPA is needed. ubuntu-latest is Noble today, but
+    # GitHub has historically lagged the `latest` alias behind the newest
+    # LTS; pinning keeps gcc-13 availability deterministic across runner
+    # rollbacks or future transitions.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y cmake tcsh gawk
+        # Plan tech-stack mandates GCC 13 on Ubuntu — install explicitly;
+        # the default gcc may lag. CC/CXX are exported below so CMake picks
+        # up gcc-13 rather than the distro default.
+        run: sudo apt-get update && sudo apt-get install -y cmake tcsh gawk gcc-13 g++-13
       - name: Configure
+        env:
+          CC: gcc-13
+          CXX: g++-13
         run: cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release
@@ -26,7 +37,9 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with: { python-version: "3.11" }
       - name: pytest (with test extras)
-        run: pip install .[test] && python -m pytest tests/ -v
+        # -m "not nightly" excludes @pytest.mark.nightly tests (e.g. e2e)
+        # which run on nightly-e2e.yml's cron. Keeps PR latency bounded.
+        run: pip install .[test] && python -m pytest tests/ -v -m "not nightly"
 
   build-macos:
     runs-on: macos-latest
@@ -38,7 +51,7 @@ jobs:
       - run: ctest --test-dir build --output-on-failure
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with: { python-version: "3.11" }
-      - run: pip install .[test] && python -m pytest tests/ -v
+      - run: pip install .[test] && python -m pytest tests/ -v -m "not nightly"
 
   build-windows-msvc:
     runs-on: windows-latest
@@ -52,7 +65,7 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with: { python-version: "3.11" }
-      - run: pip install .[test] && python -m pytest tests/ -v
+      - run: pip install .[test] && python -m pytest tests/ -v -m "not nightly"
 
   build-windows-mingw:
     runs-on: windows-latest
@@ -81,10 +94,11 @@ jobs:
       - name: pytest (incl. byte-identity goldens on MinGW)
         shell: msys2 {0}
         run: |
-          # MinGW pytest verifies Linux-MinGW byte parity per spec §11 AC#3
+          # MinGW pytest verifies Linux-MinGW byte parity per spec §11 AC#3.
+          # -m "not nightly" excludes slow e2e tests; those run in nightly-e2e.yml.
           python -m pip install --upgrade pip
           python -m pip install .[test]
-          python -m pytest tests/ -v
+          python -m pytest tests/ -v -m "not nightly"
 
   # Italian-locale CI (validates spec's locale-invariance goal end-to-end,
   # not just unit tests).
@@ -127,7 +141,8 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with: { python-version: "3.11" }
       - run: pip install .[test]
-      - run: python -m pytest tests/ -v -k "not requires_matlab and not requires_tcsh"
+      # -m "not nightly" keeps slow e2e out of PR path; nightly-e2e.yml runs those.
+      - run: python -m pytest tests/ -v -k "not requires_matlab and not requires_tcsh" -m "not nightly"
 
   # Pre-commit enforcement: contributors who skip `pre-commit install`
   # are still gated by CI. Catches ruff/mypy/pre-commit-hook violations
@@ -200,6 +215,9 @@ jobs:
 
   matlab-tests:
     runs-on: ${{ matrix.os }}
+    # 60-min safety net: well under GHA's 4-hour default (360), guards
+    # against hung MATLAB processes leaving jobs consuming minutes.
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -220,8 +238,18 @@ jobs:
         with:
           release: ${{ matrix.matlab-release }}
       - if: steps.lic.outputs.has_license == 'true'
+        # run-command@v3 invokes MATLAB with -batch under the hood, but the
+        # default `runtests(...)` call returns without signalling failure.
+        # Capturing `results` and calling `exit(any([results.Failed]))`
+        # propagates a nonzero exit when any test fails, so the job turns
+        # red instead of green-with-silent-failures.
+        #
+        # isempty(results) guard: if runtests finds zero tests (e.g. path
+        # misconfig, deleted suite), `any([])` is false and `exit(false)`
+        # returns 0 — a silent pass. Erroring out forces the job red so
+        # the regression surfaces.
         uses: matlab-actions/run-command@00a6560bdaa6b55c93fff755fb869911be1a9aab  # v3.0.1
         with:
-          command: "addpath('matlab_compat'); runtests('tests/matlab','IncludeSubfolders',true)"
+          command: "addpath('matlab_compat'); results = runtests('tests/matlab','IncludeSubfolders',true); if isempty(results), error('runtests found no tests in tests/matlab'); end; exit(any([results.Failed]))"
       - if: steps.lic.outputs.has_license == 'false'
         run: echo "::warning::Skipping MATLAB tests — no license secret configured"
