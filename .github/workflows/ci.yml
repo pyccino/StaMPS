@@ -146,17 +146,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-      - run: sudo apt-get install -y tcsh gawk cmake
-      - run: cmake -S src -B build && cmake --build build
+      - run: sudo apt-get update && sudo apt-get install -y tcsh gawk cmake build-essential
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with: { python-version: "3.11" }
-      - name: Re-capture + diff against committed goldens
+      - name: Re-capture csh outputs + diff against committed goldens
         run: |
-          if [ ! -f tests/golden/capture.sh ]; then
-            echo "::notice::tests/golden/capture.sh not yet landed (Task 2c.2 deferred). Skipping."
-            exit 0
-          fi
+          # capture.sh builds the C++ binaries + generates fixtures itself.
+          # --verify-only regenerates the golden tree into tmp and diffs against
+          # the committed tests/golden/linux_csh/. A mismatch signals either
+          # non-determinism in the csh pipeline or an unintended change in
+          # one of the C++ binaries.
           bash tests/golden/capture.sh --verify-only
+      - name: Python port byte-identity against csh golden
+        run: |
+          pip install .[test]
+          python -m pytest tests/test_golden_byte_identity.py -v
 
   # VS 2026 forward-compat probe. GitHub Actions is expected to transition
   # windows-latest to VS 2026 around May 2026. Until the generator ships on
