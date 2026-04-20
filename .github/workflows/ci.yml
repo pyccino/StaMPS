@@ -62,11 +62,15 @@ jobs:
         with:
           msystem: MINGW64
           update: true
+          # mingw-w64-x86_64-python-pip is a SEPARATE package from
+          # mingw-w64-x86_64-python — without it, `python -m pip` fails
+          # with "No module named pip". Install explicitly.
           install: >-
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
             mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-pip
       - name: Configure + build (MinGW)
         shell: msys2 {0}
         run: |

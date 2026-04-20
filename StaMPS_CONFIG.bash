@@ -11,14 +11,14 @@ export SNAPHU_BIN="/home/ahooper/software/snaphu-v1.4.2/bin"
 
 export ROI_PAC="$SAR/ROI_PAC"
 #####################################
-# ROI_PAC VERSION 3 
+# ROI_PAC VERSION 3
 #####################################
 export INT_BIN="$ROI_PAC/INT_BIN"
 export INT_SCR="$ROI_PAC/INT_SCR"
 #####################################
 
 #####################################
-# ROI_PAC VERSION 2.3 and before 
+# ROI_PAC VERSION 2.3 and before
 #####################################
 #set MACH=`uname -s`
 #if ($MACH == "HP-UX") then
@@ -59,6 +59,3 @@ export MY_SCR="$STAMPS/ROI_PAC_SCR"
 export SAR_TAPE="/dev/rmt/0mn"
 
 export PATH=${PATH}:$STAMPS/bin:$MY_SCR:$INT_BIN:$INT_SCR:$OUR_SCR:$DORIS_SCR:$GETORB_BIN:$DORIS_BIN:$TRIANGLE_BIN:$SNAPHU_BIN
-
-
-
