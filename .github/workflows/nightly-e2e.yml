@@ -1,0 +1,74 @@
+name: Nightly E2E
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # 05:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  phase-stamps-e2e:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          path: StaMPS-windows
+      - name: Resolve PHASE repo slug
+        id: phase
+        shell: bash
+        run: |
+          # PHASE_REPO repo variable wins (e.g. set to "phase-team/PHASE-windows");
+          # fall back to ${owner}/PHASE for the typical co-located fork layout.
+          slug="${{ vars.PHASE_REPO }}"
+          if [ -z "$slug" ]; then
+            slug="${{ github.repository_owner }}/PHASE"
+          fi
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+          echo "Using PHASE repo: $slug"
+      - name: Checkout PHASE fork
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: ${{ steps.phase.outputs.slug }}
+          ref: windows-port/main
+          path: PHASE
+          token: ${{ secrets.PHASE_REPO_TOKEN || github.token }}
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with: { python-version: "3.11" }
+      - name: Install StaMPS Windows
+        run: |
+          cd StaMPS-windows
+          cmake -S src -B build -G "Visual Studio 17 2022" -A x64
+          cmake --build build --config Release
+          pip install .[test]
+      - id: lic
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.MLM_LICENSE_FILE_CONTENTS }}" ]; then
+            echo "has_license=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_license=true" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.lic.outputs.has_license == 'true'
+        uses: matlab-actions/setup-matlab@a0180c939fb1a28de13f44f7b778b912384ced1f  # v3.0.1
+        with: { release: R2024a }
+      - if: steps.lic.outputs.has_license == 'true'
+        name: Run PHASE→StaMPS integration test
+        shell: pwsh
+        run: |
+          $env:STAMPS = "${{ github.workspace }}/StaMPS-windows"
+          $env:PHASE_ROOT = "${{ github.workspace }}/PHASE"
+          . $env:STAMPS/StaMPS_CONFIG.ps1
+          cd $env:STAMPS
+          python -m pytest tests/test_phase_stamps_integration.py -v
+
+  perf-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - run: sudo apt-get install -y tcsh gawk cmake
+      - run: cmake -S src -B build && cmake --build build
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with: { python-version: "3.11" }
+      - run: pip install .[test]
+      - run: python -m pytest tests/test_perf.py -v -m nightly
