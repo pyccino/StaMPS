@@ -13,10 +13,11 @@
 // 12/2012 AH Add byteswap option
 // ==============================================
 
-#include <iostream>  
+#include <iostream>
+#include <iomanip>
 using namespace std;
-     
-#include <fstream>  
+
+#include <fstream>
 using namespace std;
 
 #include <vector>  
@@ -220,7 +221,9 @@ try {
 
     ampfile.close(); 
 
-    parmfile << ampfilename << " " << calib_factor << "\n";
+    parmfile << ampfilename << " "
+             << std::scientific << std::setprecision(7) << calib_factor
+             << "\n";
     cout << "Mean amplitude = " << calib_factor << endl;
     cout << "Number of pixels with zero amplitude = " <<  nof_zero_pixels   << "\n";
     cout << "Number of pixels with amplitude different than zero = " <<  nof_pixels   << "\n";
