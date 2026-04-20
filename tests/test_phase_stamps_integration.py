@@ -24,9 +24,7 @@ def test_phase_drives_stamps_end_to_end(tmp_path: Path):
     phase_env = os.environ.get("PHASE_ROOT")
     stamps_env = os.environ.get("STAMPS")
     if not phase_env or not stamps_env:
-        pytest.skip(
-            "PHASE_ROOT and STAMPS env vars required; nightly-e2e CI job sets these"
-        )
+        pytest.skip("PHASE_ROOT and STAMPS env vars required; nightly-e2e CI job sets these")
     phase_root = Path(phase_env)
     stamps_root = Path(stamps_env)
     fixture = stamps_root / "tests/fixtures/synthetic_ps_small"
