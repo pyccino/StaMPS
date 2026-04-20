@@ -9,9 +9,9 @@ scope: snaphu uses POSIX fork/getrusage).
 from __future__ import annotations
 
 import os
-import platform
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -19,14 +19,24 @@ import pytest
 
 @pytest.mark.slow
 def test_snaphu_builds_from_vendored_cmakelists(stamps_root: Path, tmp_path: Path):
-    # snaphu cannot build under MSVC (POSIX fork/getrusage deps). On non-
-    # Windows we attempt the build; on Windows we run only inside MSYS2
-    # MINGW64 (detected via MSYSTEM) because the GitHub Actions MSVC runner
-    # image happens to ship a random MinGW in its tool cache — so
-    # `shutil.which("gcc")` is unreliable as a positive signal.
-    if platform.system() == "Windows":
-        if os.environ.get("MSYSTEM", "").upper() not in {"MINGW64", "MINGW32", "CLANG64"}:
-            pytest.skip("Not in MSYS2 MinGW shell; snaphu build covered by MinGW CI job")
+    # snaphu cannot build under MSVC (POSIX fork/getrusage deps). On
+    # Windows we distinguish two cases:
+    #   - MSVC toolchain (cl.exe on PATH, no gcc/mingw32-make): out of
+    #     scope, skip with a clear reason.
+    #   - MinGW toolchain (gcc or mingw32-make on PATH): build. MSYSTEM
+    #     is not a reliable signal because pytest launched from plain
+    #     cmd.exe on a MinGW host will not have it set. Check the real
+    #     tool presence instead.
+    if sys.platform == "win32":
+        has_msvc = shutil.which("cl") is not None
+        has_mingw = shutil.which("gcc") is not None or shutil.which("mingw32-make") is not None
+        if has_msvc and not has_mingw:
+            pytest.skip("MSVC-only toolchain; snaphu requires POSIX fork/getrusage")
+        if not has_mingw:
+            pytest.skip(
+                "No MinGW toolchain detected (gcc/mingw32-make); "
+                "snaphu build covered by the MinGW CI job"
+            )
     if shutil.which("cmake") is None:
         pytest.skip("cmake not on PATH")
     if (
