@@ -36,7 +36,6 @@ using namespace std;
 using namespace std;
 
 #include <cstdint>
-using namespace std;
 
 #include "stamps_locale.h"
 
