@@ -18,8 +18,17 @@ import pytest
 @pytest.mark.requires_matlab
 @pytest.mark.nightly
 def test_phase_drives_stamps_end_to_end(tmp_path: Path):
-    phase_root = Path(os.environ["PHASE_ROOT"])
-    stamps_root = Path(os.environ["STAMPS"])
+    # Both env vars must be set; skip cleanly if the test is collected in
+    # an environment that doesn't point at a PHASE checkout / installed
+    # StaMPS tree (standard dev/CI without the nightly-e2e harness).
+    phase_env = os.environ.get("PHASE_ROOT")
+    stamps_env = os.environ.get("STAMPS")
+    if not phase_env or not stamps_env:
+        pytest.skip(
+            "PHASE_ROOT and STAMPS env vars required; nightly-e2e CI job sets these"
+        )
+    phase_root = Path(phase_env)
+    stamps_root = Path(stamps_env)
     fixture = stamps_root / "tests/fixtures/synthetic_ps_small"
     if not fixture.exists():
         pytest.skip(f"Fixture not built yet: {fixture}")
