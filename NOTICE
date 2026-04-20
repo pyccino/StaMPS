@@ -1,0 +1,35 @@
+StaMPS Windows Port — Third-Party Components
+
+This software is distributed under GNU GPL v3 (see LICENSE).
+
+BUNDLED THIRD-PARTY COMPONENTS (in release zip stamps-windows-x64-*.zip):
+
+1. Triangle (Jonathan Richard Shewchuk, Carnegie Mellon University)
+   Location:      external/triangle/
+   License:       Research/non-commercial use only
+                  (see external/triangle/LICENSE.txt)
+   Attribution:   J. R. Shewchuk, "Triangle: Engineering a 2D Quality Mesh
+                  Generator and Delaunay Triangulator," 1996.
+                  https://www.cs.cmu.edu/~quake/triangle.html
+
+   IMPORTANT: Triangle's license does NOT permit use in commercial products
+   without the author's consent. Users intending commercial use must obtain
+   a separate license from Shewchuk. StaMPS itself (GPL v3) does permit
+   commercial use, but the bundled Triangle binary does not — use StaMPS
+   with a separately-obtained Triangle binary for commercial workflows.
+
+2. SNAPHU (Curtis Chen, Stanford University)
+   Location:      external/snaphu/
+   License:       BSD-3-Clause (see external/snaphu/LICENSE)
+   Attribution:   C. W. Chen and H. A. Zebker, "Statistical-cost network-flow
+                  approaches to two-dimensional phase unwrapping for radar
+                  interferometry," 2001.
+                  https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/
+
+3. Original StaMPS (Andy Hooper et al., University of Leeds)
+   License:       GPL v3 (see LICENSE)
+   Source:        https://github.com/dbekaert/StaMPS
+
+The Windows port modifications are licensed under GPL v3, consistent with
+the upstream StaMPS license. Source corresponding to all released binaries
+is available in the GitHub repository at the release tag.
