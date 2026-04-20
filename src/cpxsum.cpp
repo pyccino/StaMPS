@@ -114,7 +114,7 @@ int main(int  argc, char *argv[] )
  // get file size using buffer's members
  std::streamoff size=pbuf->pubseekoff (0,ios::end,ios::in);
  pbuf->pubseekpos (0,ios::in);
- nlf=size/(static_cast<std::streamoff>(width)*sizeof(complex<float>));
+ nlf=static_cast<int>(size/(static_cast<std::streamoff>(width)*sizeof(complex<float>)));
 
  cout << "Number of lines in " << infile1 << " = " << nlf << "\n";
 

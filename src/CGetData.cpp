@@ -85,7 +85,7 @@ int CGetData::getarrayMag (int dtype, float minval, float maxval, int flipflag)
 
         ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (static_cast<std::streamoff>(nsamps) * bytesperpixel) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * bytesperpixel)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -140,7 +140,7 @@ int CGetData::getarrayMag (float scalefac, int expfl, float expv, int flipflag, 
 
         ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (static_cast<std::streamoff>(nsamps) * 8) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -231,7 +231,7 @@ int CGetData::getarrayMPH (float scalefac, int expfl, float expv, int flipflag)
 
         ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (static_cast<std::streamoff>(nsamps) * 8) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -332,7 +332,7 @@ int CGetData::getarrayHgt (float scalefac, int expfl, float expv, float cont_int
 
         ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (static_cast<std::streamoff>(nsamps) * 8) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -446,7 +446,7 @@ int CGetData::getarrayByte (int min, int max, int flipflag)
 
         ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (static_cast<std::streamoff>(nsamps)) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps))) ;
 
 	if (flipflag) {
 		hflip = flipflag % 2 ;
@@ -515,7 +515,7 @@ int CGetData::getarrayRaw (int dtype)
 
         ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (static_cast<std::streamoff>(nsamps) * bytespersample) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * bytespersample)) ;
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
 	}
@@ -525,7 +525,7 @@ int CGetData::getarrayRaw (int dtype)
 
 	npix = static_cast<std::streamoff>(nsamps) * (totlines - startline) * bytespersample ;
 
-	raw = new unsigned char [npix] ;
+	raw = new unsigned char [static_cast<size_t>(npix)] ;
 	if (raw == NULL) {
 		cout << "Could not allocate memory for the raw data array " << endl ;
 		return (-1) ;
@@ -560,7 +560,7 @@ int CGetData::getarrayRG (float scalefac, int expfl, float expv, int flipflag)
 
 	ifil.seekg (std::streamoff(0), ios::end ) ;
 	lpos = ifil.tellg () ;
-	totlines = lpos / (static_cast<std::streamoff>(nsamps) * 8) ;
+	totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
