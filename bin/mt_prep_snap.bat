@@ -6,6 +6,17 @@ rem setlocal enabledelayedexpansion is REQUIRED: %ERRORLEVEL% is expanded
 rem at block-PARSE time, so `if (python -m ... & exit /b %ERRORLEVEL%)`
 rem would always exit with the pre-call errorlevel. !ERRORLEVEL! expands
 rem at runtime (delayed-expansion) so post-call errorlevel propagates.
+rem
+rem chcp 65001 forces UTF-8 on the console so non-ASCII argv (e.g. CJK
+rem paths) survives the cmd.exe -> python.exe handoff; original CP is
+rem restored at :_cleanup. Active CP is queried via PowerShell because
+rem the `chcp` command's output text is localized on non-English Windows
+rem (Italian: "Pagina codici attiva: 437") and would defeat a naive
+rem `for /f "tokens=2 delims=:"` parse.
+
+set "_ORIG_CP="
+for /f %%c in ('powershell -NoProfile -Command "[console]::OutputEncoding.CodePage" 2^>nul') do set "_ORIG_CP=%%c"
+chcp 65001 >nul 2>&1
 
 set "STAMPS=%~dp0.."
 for %%A in ("%STAMPS%") do set "STAMPS=%%~fA"
@@ -40,7 +51,8 @@ if !errorlevel! equ 0 (
 )
 
 echo ERROR: No Python 3.11+ found. Install from https://www.python.org >&2
-exit /b 9009
+set "_RC=9009"
+goto :_cleanup
 
 :check_stub
 rem Detect Microsoft Store Python stub. The Store ships a fake `python.exe`
@@ -53,14 +65,21 @@ for /f "tokens=*" %%i in ('%PYTHON_EXE% -c "import sys; print(sys.executable)" 2
 if "!RESOLVED_PY!"=="" (
     echo ERROR: Python launcher at "!PYTHON_EXE!" failed to run "import sys". >&2
     echo This is typically the Microsoft Store stub. Install real Python 3.11+ from https://www.python.org. >&2
-    exit /b 9
+    set "_RC=9"
+    goto :_cleanup
 )
 echo !RESOLVED_PY! | findstr /I "\\WindowsApps\\" >nul
 if !errorlevel! equ 0 (
     echo ERROR: "!RESOLVED_PY!" is the Microsoft Store Python stub. >&2
     echo Install real Python 3.11+ from https://www.python.org and ensure it's ahead on PATH. >&2
-    exit /b 9
+    set "_RC=9"
+    goto :_cleanup
 )
 
 %PYTHON_EXE% -m stamps.mt_prep_snap %*
-exit /b !errorlevel!
+set "_RC=!errorlevel!"
+goto :_cleanup
+
+:_cleanup
+if defined _ORIG_CP chcp !_ORIG_CP! >nul 2>&1
+exit /b !_RC!

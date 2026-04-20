@@ -97,31 +97,74 @@ def test_bat_rejects_microsoft_store_stub(stamps_root: Path, tmp_path: Path):
 @pytest.mark.windows_only
 @pytest.mark.skipif(os.name != "nt", reason="Windows shim")
 def test_bat_passes_utf8_args(stamps_root: Path, tmp_path: Path):
-    """Argv byte round-trip: non-ASCII path should reach sys.argv intact.
+    """Argv byte round-trip: non-ASCII argv must reach sys.argv as UTF-8.
 
-    The shim's cmd.exe layer must not mangle UTF-8 argv. We pass a path
-    containing a CJK character and a non-ASCII Latin-1 one, and check
-    that ``sys.argv[1]`` matches the input. We skip the full pipeline by
-    stopping at the shim's Python-launch boundary: build a throwaway
-    directory whose name contains the characters and pass it as the
-    datadir; the shim invokes ``python -m stamps.mt_prep_snap`` which
-    fails fast (no master or empty dir) but not before argv has been
-    passed through. We check returncode != 9009 (shim-level PATH failure)
-    and != 9 (stub rejection) — any other nonzero exit is fine because
-    Python at least started and received the argv.
+    The shim's cmd.exe layer must not mangle UTF-8 argv. A loose "rc not
+    in (9009, 9)" check passes even when cmd.exe delivers mojibake, so
+    this test is strict: we point STAMPS_PYTHON at a stub .bat that
+    forwards to a real Python one-liner writing ``sys.argv[1]`` encoded
+    as UTF-8 to stderr. The shim's resolver runs, invokes the stub, and
+    the stub's stderr must be byte-identical to the input path's UTF-8
+    encoding. Any byte drift (codepage 437 mojibake, surrogate-escape
+    reinterpretation, etc.) fails the assertion.
+
+    The stub must itself dispatch `-c "import sys; print(sys.executable)"`
+    queries (shim's resolver probe) and the `-m stamps.mt_prep_snap ARGS`
+    delegation separately, so it branches on argv[0] / module flag.
     """
+    import sys as _sys
+
     non_ascii = "cafe\u0301_\u5927\u962a"  # café_大阪 (NFD to dodge filesystem NFC)
-    data = tmp_path / non_ascii
-    data.mkdir()
+    expected = non_ascii.encode("utf-8")
+    real_py = _sys.executable
+
+    # Stub: two dispatch branches.
+    #   (1) `-c SNIPPET` (shim's resolver probe): forward verbatim to the
+    #       real Python so RESOLVED_PY comes out non-empty and without
+    #       `\WindowsApps\`, satisfying the stub guard.
+    #   (2) `-m stamps.mt_prep_snap MASTER DATADIR` (shim's delegation):
+    #       ignore the module, write argv-for-DATADIR (==%~4) as UTF-8
+    #       bytes to stderr, exit 42. We skip the real mt_prep_snap so
+    #       the test doesn't need fixtures.
+    # Written as CRLF bytes because cmd.exe is finicky about bare-LF .bat
+    # files; delayed expansion is REQUIRED for !errorlevel! propagation.
+    stub_src = (
+        "@echo off\r\n"
+        "setlocal enabledelayedexpansion\r\n"
+        'if /i "%~1"=="-c" (\r\n'
+        f'    "{real_py}" %*\r\n'
+        "    exit /b !errorlevel!\r\n"
+        ")\r\n"
+        'if /i "%~1"=="-m" (\r\n'
+        f'    "{real_py}" -c "import sys; sys.stderr.buffer.write(sys.argv[1].encode(\'utf-8\')); sys.exit(42)" "%~4"\r\n'
+        "    exit /b !errorlevel!\r\n"
+        ")\r\n"
+        "exit /b 1\r\n"
+    )
+    stub = tmp_path / "stub_python.bat"
+    stub.write_bytes(stub_src.encode("utf-8"))
+
+    appdata = tmp_path / "appdata"
+    (appdata / "PHASE").mkdir(parents=True)
+    (appdata / "PHASE" / "python.txt").write_text(str(stub))
+
     shim = stamps_root / "bin" / "mt_prep_snap.bat"
+    env = os.environ.copy()
+    env["APPDATA"] = str(appdata)
     proc = subprocess.run(
-        [str(shim), "20200101", str(data)],
+        [str(shim), "20200101", non_ascii],
         capture_output=True,
         timeout=30,
+        env=env,
     )
-    # 9009 = Python not found (PATH failure); 9 = Store stub rejection.
-    # Anything else (including 4 = usage error from stamps) means argv
-    # made it past cmd.exe into a real Python process.
-    assert proc.returncode not in (9009, 9), (
-        f"shim failed before argv reached Python: rc={proc.returncode}, " f"stderr={proc.stderr!r}"
+    # Stub forces exit 42 on the -m branch. 9009/9 means resolver failed.
+    assert proc.returncode == 42, (
+        f"stub never ran -m branch: rc={proc.returncode}, "
+        f"stdout={proc.stdout!r}, stderr={proc.stderr!r}"
     )
+    # Byte-exact: stderr must contain UTF-8 bytes of the input argv.
+    # The stub writes ONLY argv[1]'s UTF-8 encoding, no newline, no
+    # framing. Any cmd.exe mojibake (e.g. é -> 0x82 on CP437) fails.
+    assert (
+        proc.stderr == expected
+    ), f"argv byte mismatch: expected {expected!r}, got {proc.stderr!r}"

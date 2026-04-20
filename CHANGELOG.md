@@ -22,6 +22,14 @@ follows [Semantic Versioning](https://semver.org/).
   `skipif` boilerplate.
 
 ### Changed
+- `bin/mt_prep_snap.bat` + `bin/mt_extract_cands.bat` — force UTF-8
+  console code page (`chcp 65001`) at shim entry so non-ASCII argv
+  (CJK / accented Latin) survives the cmd.exe -> python.exe handoff
+  without codepage-437 mojibake; original CP is restored via a
+  `:_cleanup` label. Active CP is queried through PowerShell because
+  the `chcp` command's output text is localized on non-English Windows
+  (Italian "Pagina codici attiva: 437") and would break a naive
+  `for /f "tokens=2 delims=:"` parse.
 - `NOTICE` — corrected snaphu license statement from BSD-3-Clause to
   Stanford permissive + CS2 noncommercial (the embedded CS2 minimum-
   cost-flow solver is IG Systems and requires a separate commercial
