@@ -64,6 +64,16 @@ jobs:
           cmake -S external/triangle -B build-triangle -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build-triangle
           cmake --install build-triangle --prefix external/triangle
+      - name: Build snaphu (MinGW via upstream Makefile)
+        shell: msys2 {0}
+        run: |
+          # The vendored wrapper drives snaphu's own GNU Makefile. On MSYS2
+          # MinGW this works unmodified; MSVC is out of scope per
+          # external/snaphu/CMakeLists.txt. snaphu.exe lands in
+          # external/snaphu/bin/ and ships with the zip below.
+          pacman --noconfirm -S make
+          cmake -S external/snaphu -B build-snaphu
+          cmake --build build-snaphu
       - name: Package
         shell: msys2 {0}
         run: |
