@@ -57,7 +57,7 @@ int CGetData::getarrayMag (int dtype, float minval, float maxval, int flipflag)
         unsigned char  	*temparr ;
         int  		i, j, i_out, j_out, hflip=0, vflip=0 ;
 	int  		bytesperpixel ;
-        long 		lpos ;
+        std::streamoff	lpos ;
 	float 		scalemag, offmag ;
 
         ifstream ifil (infile, ios::in) ;
@@ -83,9 +83,9 @@ int CGetData::getarrayMag (int dtype, float minval, float maxval, int flipflag)
 	temparr = new unsigned char [nsamps * bytesperpixel] ;
 	bytearr = new unsigned char [nsamps] ;
 
-        ifil.seekg (long(0), ios::end ) ;
+        ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (nsamps * bytesperpixel) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * bytesperpixel)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -94,7 +94,7 @@ int CGetData::getarrayMag (int dtype, float minval, float maxval, int flipflag)
                 nlines = totlines - startline ;
         }
 	mag = new unsigned char [nsamps * nlines] ;
-        ifil.seekg (long(startline) * nsamps * bytesperpixel, ios::beg) ;
+        ifil.seekg (static_cast<std::streamoff>(startline) * nsamps * bytesperpixel, ios::beg) ;
 
         for (i =startline; i<nlines; i++) {
 		// read in a line of data then convert
@@ -121,7 +121,7 @@ int CGetData::getarrayMag (float scalefac, int expfl, float expv, int flipflag, 
 	// get the magnitude from the standard complex array
         unsigned char *optr0 ;
         int  i, j, i_out, j_out, count=0, hflip=0, vflip=0 ;
-        long lpos ;
+        std::streamoff lpos ;
         float *temparr,  *iptr0, *iptr1 ;
 	float scalemag ;
         float b1 ;
@@ -138,9 +138,9 @@ int CGetData::getarrayMag (float scalefac, int expfl, float expv, int flipflag, 
 		vflip = flipflag /2 ;
 	}
 
-        ifil.seekg (long(0), ios::end ) ;
+        ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (nsamps * 8) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -157,7 +157,7 @@ int CGetData::getarrayMag (float scalefac, int expfl, float expv, int flipflag, 
         if (!expflag) cout << "Not Applying exponent  " << endl  ;
         totmag = 0. ;
         for (i =startline; i<nlines; i+=32) {
-                ifil.seekg (long(i) * nsamps * 8, ios::beg) ;
+                ifil.seekg (static_cast<std::streamoff>(i) * nsamps * 8, ios::beg) ;
                 ifil.read ((char*)temparr, nsamps * 8) ;
                 for (j=32; j<nsamps-32; j+= 32) {
                         count += 1 ;
@@ -179,7 +179,7 @@ int CGetData::getarrayMag (float scalefac, int expfl, float expv, int flipflag, 
 
         cout << "Scaling parameter   :   "   << scalemag << endl ;
 
-        ifil.seekg (startline * nsamps * 8, ios::beg) ;
+        ifil.seekg (static_cast<std::streamoff>(startline) * nsamps * 8, ios::beg) ;
         for (i=0; i<nlines; i++) {
                 ifil.read ((char*)temparr, nsamps * 8) ;
                 for (j=0; j<nsamps; j++)
@@ -212,7 +212,7 @@ int CGetData::getarrayMPH (float scalefac, int expfl, float expv, int flipflag)
 {
         unsigned char *optr0, *optr1 ;
         int  i, j, count=0, hflip=0, vflip=0, i_out, j_out;
-        long lpos ;
+        std::streamoff lpos ;
         float *temparr,  *iptr0, *iptr1 ;
 	float scalemag ;
         float b1 ;
@@ -229,9 +229,9 @@ int CGetData::getarrayMPH (float scalefac, int expfl, float expv, int flipflag)
 	}
 	TWOPI = 8. * atan (1.) ;
 
-        ifil.seekg (long(0), ios::end ) ;
+        ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (nsamps * 8) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -249,7 +249,7 @@ int CGetData::getarrayMPH (float scalefac, int expfl, float expv, int flipflag)
         if (!expflag) cout << "Not Applying exponent  " << endl  ;
         totmag = 0. ;
         for (i =startline; i<startline+nlines; i+=32) {
-                ifil.seekg (long(i) * nsamps * 8, ios::beg) ;
+                ifil.seekg (static_cast<std::streamoff>(i) * nsamps * 8, ios::beg) ;
                 ifil.read ((char*)temparr, nsamps * 8) ;
                 for (j=32; j<nsamps-32; j+= 32) {
                         count += 1 ;
@@ -272,7 +272,7 @@ int CGetData::getarrayMPH (float scalefac, int expfl, float expv, int flipflag)
         cout << "Scaling parameter   :   "   << scalemag << endl ;
 	double phasescale = 255. / TWOPI ;
 
-        ifil.seekg (startline * nsamps * 8, ios::beg) ;
+        ifil.seekg (static_cast<std::streamoff>(startline) * nsamps * 8, ios::beg) ;
         for (i=0; i<nlines; i++) {
                 ifil.read ((char*)temparr, nsamps * 8) ;
                 for (j=0; j<nsamps; j++)
@@ -314,7 +314,7 @@ int CGetData::getarrayHgt (float scalefac, int expfl, float expv, float cont_int
 	// be treated in the same fashion as the cyclical phase
         unsigned char *optr1 ;
         int  i, j, count=0, hgtval, hflip=0, vflip=0, i_out, j_out ;
-        long lpos ;
+        std::streamoff lpos ;
         float *temparr,  *iptr0, *iptr1 ;
 	float scalemag, scalehgt ;
         float b1 ;
@@ -330,9 +330,9 @@ int CGetData::getarrayHgt (float scalefac, int expfl, float expv, float cont_int
 		vflip = flipflag / 2 ;
 	}
 
-        ifil.seekg (long(0), ios::end ) ;
+        ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (nsamps * 8) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -350,7 +350,7 @@ int CGetData::getarrayHgt (float scalefac, int expfl, float expv, float cont_int
         if (!expflag) cout << "Not Applying exponent  " << endl  ;
         totmag = 0. ;
         for (i =startline; i<startline+nlines; i+=32) {
-                ifil.seekg (long(i) * nsamps * 4 * 2, ios::beg) ;
+                ifil.seekg (static_cast<std::streamoff>(i) * nsamps * 4 * 2, ios::beg) ;
 		// just read in the magnitude portion of the line (first band)
                 ifil.read ((char*)temparr, nsamps * 4) ;
                 for (j=32; j<nsamps-32; j+= 32) {
@@ -377,7 +377,7 @@ int CGetData::getarrayHgt (float scalefac, int expfl, float expv, float cont_int
 
 	double min=1.E18, max=-1.E18;
 
-        ifil.seekg (startline * nsamps * 4 * 2, ios::beg) ;
+        ifil.seekg (static_cast<std::streamoff>(startline) * nsamps * 4 * 2, ios::beg) ;
         for (i=0; i<nlines; i++) {
 		// first read in the magnitude
                 ifil.read ((char*)temparr, nsamps * 4) ;
@@ -436,7 +436,7 @@ int CGetData::getarrayByte (int min, int max, int flipflag)
 {
         unsigned char *optr0 ;
         int  i, j, i_out, j_out, vflip=0, hflip=0 ;
-        long lpos ;
+        std::streamoff lpos ;
         unsigned char *temparr ;
 	float scalebyte, offset=0. ;
         double redval ;
@@ -444,9 +444,9 @@ int CGetData::getarrayByte (int min, int max, int flipflag)
 
         // exponent apply flag and exponent value are class members
 
-        ifil.seekg (long(0), ios::end ) ;
+        ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (nsamps) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps))) ;
 
 	if (flipflag) {
 		hflip = flipflag % 2 ;
@@ -470,7 +470,7 @@ int CGetData::getarrayByte (int min, int max, int flipflag)
 
 
 
-        ifil.seekg (startline * nsamps, ios::beg) ;
+        ifil.seekg (static_cast<std::streamoff>(startline) * nsamps, ios::beg) ;
         for (i=0; i<nlines; i++) {
                 ifil.read ((char*)temparr, nsamps) ;
                 for (j=0; j<nsamps; j++)
@@ -507,15 +507,15 @@ int CGetData::Raw2Mag (int dtype, float min, float max, int flipflag) {
 int CGetData::getarrayRaw (int dtype)
 {
 	int bytespersample ;
-	long lpos, npix = 0 ;
+	std::streamoff lpos, npix = 0 ;
 
         ifstream ifil (infile, ios::in) ;
 
 	bytespersample = bpp [dtype] ;
 
-        ifil.seekg (long(0), ios::end ) ;
+        ifil.seekg (std::streamoff(0), ios::end ) ;
         lpos = ifil.tellg () ;
-        totlines = lpos / (nsamps * bytespersample) ;
+        totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * bytespersample)) ;
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
 	}
@@ -523,15 +523,15 @@ int CGetData::getarrayRaw (int dtype)
 		nlines = totlines - startline ;
 	}
 
-	npix = nsamps * (totlines - startline) * bytespersample ;
+	npix = static_cast<std::streamoff>(nsamps) * (totlines - startline) * bytespersample ;
 
-	raw = new unsigned char [npix] ;
+	raw = new unsigned char [static_cast<size_t>(npix)] ;
 	if (raw == NULL) {
 		cout << "Could not allocate memory for the raw data array " << endl ;
 		return (-1) ;
 	}
 
-	ifil.seekg (startline * nsamps * bytespersample, ios::beg) ;
+	ifil.seekg (static_cast<std::streamoff>(startline) * nsamps * bytespersample, ios::beg) ;
 	ifil.read ((char*)raw, npix) ;
 	ifil.close () ;
 	return (1) ;
@@ -542,7 +542,7 @@ int CGetData::getarrayRG (float scalefac, int expfl, float expv, int flipflag)
 {
 	unsigned char *optr0, *optr1 ;
 	int  i, j, count=0, hflip=0, vflip=0, i_out, j_out;
-	long lpos ;
+	std::streamoff lpos ;
 	float *temparr, redval, grnval, *iptr0, *iptr1 ;
 	float b1, b2 ;
 	double totred, totgrn ;
@@ -558,9 +558,9 @@ int CGetData::getarrayRG (float scalefac, int expfl, float expv, int flipflag)
 	}
 
 
-	ifil.seekg (long(0), ios::end ) ;
+	ifil.seekg (std::streamoff(0), ios::end ) ;
 	lpos = ifil.tellg () ;
-	totlines = lpos / (nsamps * 8) ;
+	totlines = static_cast<int>(lpos / (static_cast<std::streamoff>(nsamps) * 8)) ;
 
 	if (nlines > totlines-startline) {
                 nlines = totlines - startline ;
@@ -579,7 +579,7 @@ int CGetData::getarrayRG (float scalefac, int expfl, float expv, int flipflag)
 	totred = 0. ;
 	totgrn = 0. ;
 	for (i =startline; i<startline+nlines; i+=32) {
-		ifil.seekg (long(i) * nsamps * 8, ios::beg) ;
+		ifil.seekg (static_cast<std::streamoff>(i) * nsamps * 8, ios::beg) ;
 		ifil.read ((char*)temparr, nsamps * 8) ;
 		for (j=32; j<nsamps-32; j+= 32) {
 			count += 1 ;
@@ -604,7 +604,7 @@ int CGetData::getarrayRG (float scalefac, int expfl, float expv, int flipflag)
 	//
 	cout << "Scaling parameters   Red :   "   << scalered << "    Green :   " << scalegrn << endl ;
 
-	ifil.seekg (long(startline)*nsamps*8, ios::beg) ;
+	ifil.seekg (static_cast<std::streamoff>(startline)*nsamps*8, ios::beg) ;
 	for (i=0; i<nlines; i++) {
 		ifil.read ((char*)temparr, nsamps * 8) ;
 		for (j=0; j<nsamps; j++)
