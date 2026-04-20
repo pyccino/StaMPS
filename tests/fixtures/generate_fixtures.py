@@ -180,17 +180,17 @@ def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Generate deterministic synthetic SAR fixtures for StaMPS tests.",
     )
-    parser.add_argument(
-        "out",
-        nargs="?",
-        default="tests/fixtures",
-        help="Output directory (default: tests/fixtures)",
-    )
+    # Keyword-only ``--out`` (no positional form). Previous revisions accepted
+    # both an ``out`` positional and an ``--out`` flag, which was redundant and
+    # confusing at the CLI; the flag form is self-documenting, so we keep only
+    # that one. All in-tree callers (conftest.py, tests/golden/capture.sh,
+    # nightly-e2e.yml / ci.yml) either import the Python API or invoke without
+    # arguments, so no caller update is required.
     parser.add_argument(
         "--out",
-        dest="out_flag",
-        default=None,
-        help="Alias for positional ``out`` (flag form for CI readability).",
+        dest="out",
+        default="tests/fixtures",
+        help="Output directory (default: tests/fixtures).",
     )
     parser.add_argument(
         "--small",
@@ -204,7 +204,7 @@ def _main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    dest = Path(args.out_flag if args.out_flag is not None else args.out)
+    dest = Path(args.out)
     if args.small:
         ps_name, sb_name = "synthetic_ps_small", "synthetic_sb_small"
         width, length = SMALL_WIDTH, SMALL_LENGTH
