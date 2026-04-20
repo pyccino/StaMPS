@@ -12,8 +12,34 @@ import glob as _glob
 import locale
 import os
 import shutil
+import stat
 import time
 from pathlib import Path
+
+
+def _force_remove(path: Path) -> None:
+    """Remove a file or directory tree, tolerating read-only Windows files.
+
+    Windows refuses to delete files flagged FILE_ATTRIBUTE_READONLY; the
+    unlink/rmtree syscall raises PermissionError. We flip the write bit
+    and retry. Symlinks are unlinked directly — never recursed into.
+    """
+
+    def onerror(func, p, _exc):  # type: ignore[no-untyped-def]
+        try:
+            os.chmod(p, stat.S_IWRITE | stat.S_IREAD)
+            func(p)
+        except OSError:
+            raise
+
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path, onerror=onerror)
+    elif path.exists() or path.is_symlink():
+        try:
+            path.unlink()
+        except PermissionError:
+            os.chmod(path, stat.S_IWRITE)
+            path.unlink()
 
 
 def sorted_glob(pattern: Path | str) -> list[Path]:
@@ -67,10 +93,10 @@ def rm_rf_glob(pattern: Path | str, retries: int = 3, backoff_s: float = 0.1) ->
     for victim in sorted_glob(p):
         for attempt in range(retries):
             try:
-                if victim.is_dir() and not victim.is_symlink():
-                    shutil.rmtree(victim)
-                else:
-                    victim.unlink(missing_ok=True)
+                _force_remove(victim)
+                break
+            except FileNotFoundError:
+                # Matches the prior unlink(missing_ok=True) contract.
                 break
             except PermissionError:
                 if attempt == retries - 1:
@@ -125,12 +151,18 @@ def _write_bytes_with_retry(
 
 
 def write_text_lf(path: Path | str, content: str) -> None:
-    """Write text with LF endings and ASCII encoding on every OS.
+    """Write text with LF endings and UTF-8 encoding on every OS.
 
-    Retries on PermissionError (OneDrive sync lock). Uses \\\\?\\ long-path
-    prefix on Windows paths > 240 chars.
+    Byte-identical to the prior ASCII encoder for the ASCII subset, so
+    existing csh-captured goldens don't drift. UTF-8 was chosen over
+    strict ASCII because SNAP-provided fields (orbit product names,
+    mission labels) may carry occasional non-ASCII whitespace; downstream
+    StaMPS C++ binaries treat the file contents as opaque byte streams
+    plus newline delimiters, so UTF-8 passthrough is safe. Retries on
+    PermissionError (OneDrive sync lock). Uses \\\\?\\ long-path prefix on
+    Windows paths > 240 chars.
     """
-    _write_bytes_with_retry(Path(path), content.encode("ascii"))
+    _write_bytes_with_retry(Path(path), content.encode("utf-8"))
 
 
 def write_text_for_cpp(path: Path | str, content: str) -> None:
@@ -162,11 +194,21 @@ def long_path(p: Path | str) -> Path:
 
     Allows CreateFileW-based APIs (Python's pathlib on Windows uses wide API)
     to exceed the 260-char MAX_PATH limit. On non-Windows, returns as-is.
+
+    Normalizes forward slashes to backslashes on Windows before the UNC
+    prefix check so inputs like ``//server/share/...`` are rewritten as
+    ``\\\\?\\UNC\\server\\share\\...``. Python's ``pathlib`` plus user
+    code frequently hand us mixed-separator strings on Windows; the
+    \\\\?\\ prefix requires native backslashes.
     """
     p = Path(p)
     if os.name != "nt":
         return p
     s = str(p)
+    # Normalize forward slashes so UNC detection (\\) matches //server/share
+    # and the final long-path prefix is well-formed (Windows \\?\ only
+    # accepts backslash separators).
+    s = s.replace("/", "\\")
     if len(s) < 240 or s.startswith("\\\\?\\"):
         return p
     # Absolute paths only (relative paths can't use \\?\ prefix)
