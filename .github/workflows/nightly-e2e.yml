@@ -17,7 +17,7 @@ jobs:
         id: phase
         shell: bash
         run: |
-          # PHASE_REPO repo variable wins (e.g. set to "phase-team/PHASE-windows");
+          # PHASE_REPO repo variable wins (e.g. set to "pyccino/PHASE-windows");
           # fall back to ${owner}/PHASE for the typical co-located fork layout.
           slug="${{ vars.PHASE_REPO }}"
           if [ -z "$slug" ]; then

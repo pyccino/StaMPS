@@ -74,7 +74,10 @@ follows [Semantic Versioning](https://semver.org/).
   (hunks did not match snaphu v2.0.6) and a full MSVC port is out of
   scope. Users on MSVC must supply a pre-built snaphu binary.
 
-## [1.0.0] — <release date>
+## [1.0.0] — Unreleased
+<!-- v1.0.0 has not been tagged yet. When the release is cut (see
+     "Release process" in docs/DEVELOPING.md), replace "Unreleased"
+     on this line with the actual tag date in YYYY-MM-DD form. -->
 
 ### Added
 - Windows native support for SNAP preprocessor path (no WSL / Cygwin).

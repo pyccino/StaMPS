@@ -32,6 +32,38 @@
 A GitHub issue is opened with title "Re-enable SignPath signing" and label
 `signpath-pending`. Close it as part of step 6 above.
 
+## Key rotation and revocation
+
+If the SignPath API token is compromised (leaked credential, suspected
+exfiltration from CI logs, departing maintainer, etc.), treat it as an
+incident and follow these steps in order:
+
+1. **Revoke immediately** via the SignPath dashboard
+   (https://app.signpath.io/ → *API Tokens* → *Revoke*). Do this FIRST,
+   before any other step — a live token is actively signing.
+2. **Generate a new token** in the SignPath dashboard with the minimum
+   scope required by the release workflow.
+3. **Update the GitHub secret** on the fork:
+
+        gh secret set SIGNPATH_API_TOKEN --repo pyccino/StaMPS < <(read -s)
+
+   (Paste the new token at the `read -s` prompt; it will not echo.)
+   Also update any environment-scoped copies if the release job uses a
+   GitHub Environment gate.
+4. **Re-run the most recent release workflow** so any artifacts that
+   were pending signature when the token was revoked get re-signed with
+   the new token:
+
+        gh run rerun --repo pyccino/StaMPS <run-id>
+
+   Do NOT manually delete unsigned artifacts from the release — the
+   workflow replaces them atomically on success.
+5. **Notify downstream** via the advisory channel documented in
+   `SECURITY.md` (GitHub Security Advisory + release-notes call-out).
+   If signed artifacts were produced with the compromised token,
+   the advisory MUST name the affected version range so that
+   verifiers re-check signatures against the new public key.
+
 ## Why this file exists
 
 SignPath approval is asynchronous and easy to forget. This file is a hard

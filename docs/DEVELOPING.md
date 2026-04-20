@@ -1,6 +1,6 @@
 # Developing the StaMPS Windows Port
 
-This guide is for contributors to the `phase-team/StaMPS-windows` fork.
+This guide is for contributors to the `pyccino/StaMPS` fork.
 For users, see `INSTALL.md`.
 
 ## Build from source — all 4 platforms
@@ -83,6 +83,61 @@ Install pre-commit (see Task 4.12):
 
 Hooks enforce: ruff format, ruff check, mypy on `python/stamps/`, trailing
 whitespace, no CRLF in source files, no SHA256 placeholders in external/.
+
+## Branching and Worktrees
+
+The port uses a strictly linear branch hierarchy. All refs live under
+`windows-port/` on the fork (`pyccino/StaMPS`); the original `master`
+branch tracks upstream `dbekaert/StaMPS` and is left untouched.
+
+### Branch naming
+
+- **Integration trunk:** `windows-port/main`. All phase work eventually
+  lands here via PR. Only the orchestrator merges to trunk (see
+  `PORT_README.md` for ownership rules).
+- **Phase-root branches:** `windows-port/pr<N>` (e.g. `windows-port/pr1`,
+  `windows-port/pr2`). Use a dash, never a slash, between `pr` and the
+  number. No direct commits — PRs only.
+- **Task branches under a phase root:**
+  `windows-port/pr<N>-<short-name>` (example:
+  `windows-port/pr1-rename-mt-prep`).
+- **Port follow-up fixes** not tied to a numbered phase:
+  `windows-port/fix-<short-name>` (example:
+  `windows-port/fix-governance`).
+
+**Why dash, not slash:** git refs cannot collide in hierarchy. A branch
+named `windows-port/pr1` prevents creation of `windows-port/pr1/rename`
+(and vice-versa) because git stores refs as filesystem paths under
+`.git/refs/heads/` — a file and a directory cannot share a name. Use
+dashes consistently to avoid the collision entirely.
+
+### Worktree convention
+
+Each task lives in its own git worktree so that unrelated work cannot
+cross-contaminate. The parent project layout is:
+
+    Phase-StaMPS-rewrite/
+    ├── StaMPS/                    # primary checkout of windows-port/main
+    └── worktrees/
+        ├── <task-name>/           # one worktree per task
+        └── ...
+
+Create a worktree for new task work with:
+
+    cd Phase-StaMPS-rewrite/StaMPS
+    git worktree add -b windows-port/pr<N>-<task> \
+        ../worktrees/<task-name> windows-port/pr<N>
+
+Remove it after the PR merges:
+
+    git worktree remove ../worktrees/<task-name>
+    git branch -d windows-port/pr<N>-<task>
+
+### Ownership and merging
+
+See `PORT_README.md` for the full ownership matrix. In short: workers
+push task branches and open PRs; only the orchestrator merges to phase
+roots and to `windows-port/main`.
 
 ## Release process
 

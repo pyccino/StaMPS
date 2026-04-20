@@ -4,7 +4,8 @@ This software is distributed under GNU GPL v3 (see LICENSE).
 
 BUNDLED THIRD-PARTY COMPONENTS (in release zip stamps-windows-x64-*.zip):
 
-1. Triangle (Jonathan Richard Shewchuk, Carnegie Mellon University)
+1. Triangle (Jonathan Richard Shewchuk, UC Berkeley, as of 2005;
+   Carnegie Mellon University at time of initial authorship, 1993)
    Location:      external/triangle/
    License:       Research/non-commercial use only
                   (see external/triangle/LICENSE.txt)
