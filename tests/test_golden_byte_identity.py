@@ -123,6 +123,6 @@ def test_python_mt_prep_snap_matches_csh_golden(stamps_root: Path, tmp_path: Pat
         ):
             mismatches.append(str(rel))
     assert not missing, f"Python port missing artifacts present in golden: {missing}"
-    assert not mismatches, (
-        f"Python port output diverged byte-for-byte from csh golden: {mismatches}"
-    )
+    assert (
+        not mismatches
+    ), f"Python port output diverged byte-for-byte from csh golden: {mismatches}"

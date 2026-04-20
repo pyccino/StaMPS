@@ -151,17 +151,7 @@ _capture_one() {
 }
 
 _capture_one ps_single "$STAMPS/tests/fixtures/synthetic_ps" 0.4
-
-# TODO: sb_single capture blocked on fixture naming mismatch.
-# The legacy csh's SB detection does:
-#   \ls $datadir/SMALL_BASELINES/*/$master.*slc.par
-# expecting MASTER-named .par files (e.g. 20200101.rslc.par) inside each
-# pair dir. Our synthetic_sb generator writes PAIR-named .par files
-# (20200101_20200113.rslc.par) which don't match that glob, so tcsh
-# hangs. Fix: either update generate_fixtures.py to emit master-named
-# par files (and update the SHA256 manifest), or add a csh-compatible
-# symlink layer in capture.sh. Tracking as follow-up.
-# _capture_one sb_single "$STAMPS/tests/fixtures/synthetic_sb" 0.6
+_capture_one sb_single "$STAMPS/tests/fixtures/synthetic_sb" 0.6
 
 # Filter out excluded files before committing (or comparing).
 _prune_excludes() {
@@ -171,18 +161,23 @@ _prune_excludes() {
     done
 }
 _prune_excludes "$TMP_ROOT/ps_single"
+_prune_excludes "$TMP_ROOT/sb_single"
 
 if [ "$VERIFY_ONLY" -eq 1 ]; then
     echo "==> verifying against committed goldens"
     rc=0
-    for pass in ps_single; do
+    # Use a Python verifier that treats text + integer binaries as
+    # byte-identical but allows rtol=1e-6 drift on float32 binaries.
+    # Last-bit drift on .flt / .da / .hgt / .ph / .ll between glibc
+    # versions (NixOS vs Ubuntu, or Ubuntu LTS over years) is expected
+    # and acceptable; algorithmic drift (beyond ~1 ulp) is not.
+    for pass in ps_single sb_single; do
         if [ ! -d "$GOLDEN_ROOT/$pass" ]; then
             echo "MISSING: $GOLDEN_ROOT/$pass (not yet committed)"
             rc=1
             continue
         fi
-        if ! diff -r "$GOLDEN_ROOT/$pass" "$TMP_ROOT/$pass"; then
-            echo "MISMATCH in $pass"
+        if ! python3 "$SCRIPT_DIR/_verify.py" "$GOLDEN_ROOT/$pass" "$TMP_ROOT/$pass"; then
             rc=1
         fi
     done
@@ -192,9 +187,10 @@ fi
 # Capture mode: copy into the committed tree.
 echo "==> installing goldens"
 mkdir -p "$GOLDEN_ROOT"
-for pass in ps_single; do
+for pass in ps_single sb_single; do
     rm -rf "$GOLDEN_ROOT/$pass"
     cp -r "$TMP_ROOT/$pass" "$GOLDEN_ROOT/$pass"
 done
 echo "==> done. artifacts under $GOLDEN_ROOT/"
 ls "$GOLDEN_ROOT"/ps_single | head -5
+ls "$GOLDEN_ROOT"/sb_single | head -5

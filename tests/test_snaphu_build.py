@@ -78,6 +78,6 @@ def test_snaphu_builds_from_vendored_cmakelists(stamps_root: Path, tmp_path: Pat
     result = subprocess.run([str(snaphu_bin)], capture_output=True, timeout=30)
     # snaphu prints to stderr when invoked without args; don't assert on rc
     output = (result.stdout + result.stderr).decode(errors="replace")
-    assert "snaphu" in output.lower(), (
-        f"snaphu invocation produced no recognizable output:\n{output}"
-    )
+    assert (
+        "snaphu" in output.lower()
+    ), f"snaphu invocation produced no recognizable output:\n{output}"

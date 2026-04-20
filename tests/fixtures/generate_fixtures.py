@@ -111,6 +111,12 @@ def generate_sb_fixture(dest: Path):
         master, slave = pair.split("_")
         (pd / f"{master}.rslc").write_bytes(_gen_complex_raster(rng, WIDTH, LENGTH))
         (pd / f"{slave}.rslc").write_bytes(_gen_complex_raster(rng, WIDTH, LENGTH))
+        # Upstream csh mt_prep_snap detects SB via:
+        #   \ls $datadir/SMALL_BASELINES/*/$master.*slc.par
+        # which expects a MASTER-named .par file inside each pair dir, not
+        # a pair-named one. Write both to be robust — the legacy script
+        # picks up the first match; the Python port accepts either.
+        _write_par(pd / f"{master}.rslc.par", LENGTH, WIDTH)
         _write_par(pd / f"{pair}.rslc.par", LENGTH, WIDTH)
         (pd / f"{pair}.diff").write_bytes(_gen_complex_raster(rng, WIDTH, LENGTH))
         _write_baseline(pd / f"{pair}.base")
