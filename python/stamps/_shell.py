@@ -251,6 +251,13 @@ def append_glob(out_path: Path | str, pattern: Path | str, preamble: str | None 
 def long_path(p: Path | str) -> Path:
     """On Windows, prepend \\\\?\\ to paths longer than 240 chars.
 
+    Accepts ``str | Path`` filesystem paths only. URIs (``file://``,
+    ``http://``, ``https://``) are not supported — callers must resolve
+    those to filesystem paths before calling. As a defensive guard
+    against URI-shaped strings leaking in, we skip the forward-slash
+    normalization when the input starts with a URI scheme prefix or is
+    already ``\\\\?\\``-prefixed.
+
     Allows CreateFileW-based APIs (Python's pathlib on Windows uses wide API)
     to exceed the 260-char MAX_PATH limit. On non-Windows, returns as-is.
 
@@ -264,11 +271,16 @@ def long_path(p: Path | str) -> Path:
     if os.name != "nt":
         return p
     s = str(p)
+    # Defensive: don't mangle URIs (file:///C:/..., http://..., etc.) or
+    # already-prefixed long paths. Forward slashes there carry meaning
+    # we must not rewrite.
+    if s.startswith(("file:", "http:", "https:", "\\\\?\\")):
+        return p
     # Normalize forward slashes so UNC detection (\\) matches //server/share
     # and the final long-path prefix is well-formed (Windows \\?\ only
     # accepts backslash separators).
     s = s.replace("/", "\\")
-    if len(s) < 240 or s.startswith("\\\\?\\"):
+    if len(s) < 240:
         return p
     # Absolute paths only (relative paths can't use \\?\ prefix)
     if not p.is_absolute():

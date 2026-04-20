@@ -232,3 +232,12 @@ def test_rm_rf_glob_handles_readonly_directory(tmp_path: Path):
             os.chmod(ro_dir, stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
 
     assert not ro_dir.exists()
+
+
+def test_long_path_does_not_mangle_file_uri():
+    """long_path must not rewrite forward slashes inside a file:// URI."""
+    uri = "file:///C:/foo/bar/" + ("x" * 300)
+    # Pass as str to avoid Path() munging the URI on non-Windows.
+    got = str(long_path(uri))
+    assert "/" in got, f"forward slashes were rewritten in URI: {got!r}"
+    assert "\\\\?\\" not in got, f"URI should not get \\\\?\\ prefix: {got!r}"
