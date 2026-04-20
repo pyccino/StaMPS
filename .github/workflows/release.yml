@@ -70,8 +70,10 @@ jobs:
           # The vendored wrapper drives snaphu's own GNU Makefile. On MSYS2
           # MinGW this works unmodified; MSVC is out of scope per
           # external/snaphu/CMakeLists.txt. snaphu.exe lands in
-          # external/snaphu/bin/ and ships with the zip below.
-          pacman --noconfirm -S make
+          # external/snaphu/bin/ and ships with the zip below. The make
+          # package supplies mingw32-make which the vendored CMakeLists
+          # picks up via find_program.
+          pacman --noconfirm -S mingw-w64-x86_64-make
           cmake -S external/snaphu -B build-snaphu
           cmake --build build-snaphu
       - name: Package

@@ -20,7 +20,7 @@ if(MSVC)
     return()
 endif()
 
-find_program(MAKE_EXECUTABLE NAMES gmake make REQUIRED)
+find_program(MAKE_EXECUTABLE NAMES gmake make mingw32-make REQUIRED)
 
 ExternalProject_Add(snaphu
     URL "https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/snaphu-${SNAPHU_VERSION}.tar.gz"
