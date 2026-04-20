@@ -58,10 +58,10 @@ fseek(fid,0,-1);
 pbytes=fbytes/ny/nx;
 if pbytes==4
     fprintf('dem_radar.raw looks to be single precision\n')
-    bb=fread(fid,[nx,inf],'float=>single');
+    bb=fread(fid,[nx,inf],'float=>single',0,'ieee-le');
 elseif pbytes==8
     fprintf('dem_radar.raw looks to be double precision\n')
-    bb=fread(fid,[nx,inf],'double=>single');
+    bb=fread(fid,[nx,inf],'double=>single',0,'ieee-le');
 else
     fprintf('dem_radar.raw length is %d\n',fbytes)
     fprintf('Number of lines (multilooked) is %d\n',ny)
@@ -97,7 +97,7 @@ if exist(ampfile,'file')
     end
     if cintdatenum < ampdatenum
         fid=fopen(ampfile); 
-        aa=fread(fid,[nx,inf],'float=>single');
+        aa=fread(fid,[nx,inf],'float=>single',0,'ieee-le');
     end
 end
 
@@ -105,7 +105,7 @@ if ~exist('aa','var')
     fid=fopen('cint.raw'); 
     aa=zeros(nx,ny,'single'); 
     for i=1:ny
-        [aa_bit,byte_count]=fread(fid,[nx*2,ar],'float=>single');
+        [aa_bit,byte_count]=fread(fid,[nx*2,ar],'float=>single',0,'ieee-le');
         aa(:,i)=sum(abs(complex(aa_bit(1:2:end,:),aa_bit(2:2:end,:))),2);
     end
     %aa=fread(fid,[width*2,inf],'float=>single');

@@ -313,7 +313,7 @@ if n_ps~=0
 
             fclose(fid);
   
-            system('triangle -e psweed.1.node > triangle_weed.log');
+            sp_system('triangle -e psweed.1.node > triangle_weed.log');
 
             fid=fopen('psweed.2.edge','r');
             header=str2num(fgetl(fid));
