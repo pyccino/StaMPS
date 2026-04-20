@@ -329,3 +329,133 @@ def test_pscphase_invoked_when_dophase(tmp_path, monkeypatch):
         "pscands.1.ij",
         "pscands.1.ph",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Silent-failure & encoding regression tests (windows-port/fix-mt-extract-cands)
+# ---------------------------------------------------------------------------
+
+
+def test_failed_patch_does_not_stop_loop_but_exits_nonzero(tmp_path, monkeypatch, capsys):
+    """A failing patch must not short-circuit; all patches attempted; exit != 0.
+
+    csh's foreach silently continued on failure; the Python port must collect
+    failures and surface them so CI catches what csh swallowed.
+    """
+    _setup_env(tmp_path, monkeypatch)
+    workdir = _make_workdir(tmp_path, monkeypatch, patches=["PATCH_1", "PATCH_2", "PATCH_3"])
+    (workdir / "pscphase.in").write_text("x\n")
+
+    import stamps.mt_extract_cands as mec
+
+    def fake_run(cmd, *args, cwd=None, **kwargs):
+        # Fail only for PATCH_2. Passing for PATCH_1 and PATCH_3.
+        if cwd and Path(cwd).name == "PATCH_2":
+            return MagicMock(returncode=42)
+        return MagicMock(returncode=0)
+
+    spy = MagicMock(side_effect=fake_run)
+    monkeypatch.setattr(mec.subprocess, "run", spy)
+
+    with pytest.raises(SystemExit) as excinfo:
+        mec.main(["1", "0", "0", "0"])  # only dophase → 1 call per patch
+
+    assert excinfo.value.code == 1
+    # All three patches were attempted despite PATCH_2's failure.
+    assert spy.call_count == 3
+    seen = {Path(call.kwargs["cwd"]).name for call in spy.call_args_list}
+    assert seen == {"PATCH_1", "PATCH_2", "PATCH_3"}
+
+    err = capsys.readouterr().err
+    assert "PATCH_2" in err
+    assert "42" in err
+
+
+def test_missing_patch_dir_is_reported_not_crashes(tmp_path, monkeypatch, capsys):
+    """A patch.list entry pointing at a non-existent dir must not raise."""
+    _setup_env(tmp_path, monkeypatch)
+    workdir = _make_workdir(tmp_path, monkeypatch, patches=["PATCH_1"])
+    # Append a nonexistent patch dir to patch.list.
+    (workdir / "patch.list").write_text("PATCH_1\nPATCH_GHOST\n")
+    (workdir / "pscphase.in").write_text("x\n")
+    spy = _spy_run(monkeypatch)
+
+    import stamps.mt_extract_cands as mec
+
+    with pytest.raises(SystemExit) as excinfo:
+        mec.main(["1", "0", "0", "0"])
+
+    assert excinfo.value.code == 1
+    # Only PATCH_1 actually ran a subprocess; PATCH_GHOST was skipped cleanly.
+    assert spy.call_count == 1
+    assert Path(spy.call_args_list[0].kwargs["cwd"]).name == "PATCH_1"
+
+    err = capsys.readouterr().err
+    assert "PATCH_GHOST" in err
+    # Sanity: no FileNotFoundError leaked through.
+    assert "Traceback" not in err
+
+
+def test_patch_list_crlf_robust(tmp_path, monkeypatch):
+    """patch.list with Windows CRLF line endings parses both patches."""
+    _setup_env(tmp_path, monkeypatch)
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    (workdir / "PATCH_1").mkdir()
+    (workdir / "PATCH_2").mkdir()
+    # Explicit CRLF — bytes mode to bypass any universal-newline translation.
+    (workdir / "patch.list").write_bytes(b"PATCH_1\r\nPATCH_2\r\n")
+    (workdir / "selpsc.in").write_text("100\n")
+    monkeypatch.chdir(workdir)
+    spy = _spy_run(monkeypatch)
+    from stamps.mt_extract_cands import main
+
+    rc = main(["0", "0", "0", "1"])  # only docands → 1 call per patch
+    assert rc == 0
+    assert spy.call_count == 2
+    seen = {Path(call.kwargs["cwd"]).name for call in spy.call_args_list}
+    assert seen == {"PATCH_1", "PATCH_2"}
+
+
+def test_patch_list_utf8_bom_stripped(tmp_path):
+    """patch.list with leading UTF-8 BOM: BOM must not leak into first patch name.
+
+    SNAP on Windows sometimes writes text files with a UTF-8 BOM (\\xef\\xbb\\xbf).
+    Without encoding="utf-8-sig" the first patch name would be "\\ufeffPATCH_1"
+    and the subsequent `workdir / patch` would try to cd into a nonexistent dir.
+    """
+    from stamps.mt_extract_cands import _parse_patch_list
+
+    list_path = tmp_path / "patch.list"
+    list_path.write_bytes(b"\xef\xbb\xbfPATCH_1\nPATCH_2\n")
+    assert _parse_patch_list(list_path) == ["PATCH_1", "PATCH_2"]
+
+
+def test_patch_list_trailing_whitespace_stripped(tmp_path):
+    """Per-line trailing whitespace (spaces, tabs) and blank lines are stripped."""
+    from stamps.mt_extract_cands import _parse_patch_list
+
+    list_path = tmp_path / "patch.list"
+    list_path.write_text("PATCH_1   \n  PATCH_2\t\n\n", encoding="utf-8")
+    assert _parse_patch_list(list_path) == ["PATCH_1", "PATCH_2"]
+
+
+def test_patch_list_encoding_utf8(tmp_path, monkeypatch):
+    """Non-ASCII patch names (é, ß) round-trip through UTF-8 patch.list."""
+    _setup_env(tmp_path, monkeypatch)
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    patches = ["PATCH_café", "PATCH_straße"]
+    for p in patches:
+        (workdir / p).mkdir()
+    (workdir / "patch.list").write_text("\n".join(patches) + "\n", encoding="utf-8")
+    (workdir / "selpsc.in").write_text("100\n")
+    monkeypatch.chdir(workdir)
+    spy = _spy_run(monkeypatch)
+    from stamps.mt_extract_cands import main
+
+    rc = main(["0", "0", "0", "1"])
+    assert rc == 0
+    assert spy.call_count == 2
+    seen = {Path(call.kwargs["cwd"]).name for call in spy.call_args_list}
+    assert seen == set(patches)
