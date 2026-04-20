@@ -148,7 +148,10 @@ cmake -S external/triangle -B build-triangle
 cmake --build build-triangle --config Release
 cmake --install build-triangle --prefix external/triangle
 
-# Build snaphu from the vendored CMake wrapper:
+# NOTE: snaphu cannot be built under MSVC (it relies on POSIX fork +
+# getrusage). Under MSVC the wrapper below no-ops with a STATUS message.
+# Install a pre-built snaphu.exe into external/snaphu/bin/ OR re-run the
+# snaphu build under the "MinGW alternative" section below.
 cmake -S external/snaphu -B build-snaphu
 cmake --build build-snaphu --config Release
 ```
