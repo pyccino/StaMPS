@@ -21,3 +21,8 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
+    groups:
+      pip-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
