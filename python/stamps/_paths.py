@@ -15,7 +15,26 @@ def stamps_root() -> Path:
             "STAMPS environment variable is not set. Source "
             "StaMPS_CONFIG.bash (Linux) or StaMPS_CONFIG.ps1 (Windows)."
         )
-    return Path(val)
+    # resolve(strict=False) canonicalizes the path so callers that compare
+    # two stamps_root()-derived paths dedupe across NTFS junctions and
+    # symlinks. strict=False lets setup-time callers use this before the
+    # target directory exists (some tests do this).
+    return Path(val).resolve(strict=False)
+
+
+def _paths_equivalent(a: Path, b: Path) -> bool:
+    """Return True if *a* and *b* point at the same filesystem object.
+
+    Uses ``os.path.samefile`` which compares inode (POSIX) / file-id
+    (Windows) — reliable across NTFS junctions where ``Path.resolve``
+    has historical edge cases. Falls back to ``resolve(strict=False)``
+    equality when ``samefile`` raises ``FileNotFoundError`` (either
+    operand doesn't exist on disk yet).
+    """
+    try:
+        return os.path.samefile(a, b)
+    except FileNotFoundError:
+        return a.resolve(strict=False) == b.resolve(strict=False)
 
 
 def resolve_bin(name: str, platform: str | None = None) -> Path:
@@ -75,7 +94,7 @@ def check_python_coordination() -> None:
         return
     running = Path(sys.executable)
     try:
-        if shared.resolve() != running.resolve():
+        if not _paths_equivalent(shared, running):
             warnings.warn(
                 f"PHASE's %APPDATA%\\PHASE\\python.txt points to "
                 f"{shared} but StaMPS is running under {running}. "
