@@ -1,0 +1,27 @@
+[project]
+name = "stamps"
+version = "0.0.0"
+description = "StaMPS Python port (internal)"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7",
+    "hypothesis>=6",
+    "numpy>=1.24",       # ulp-tolerant golden comparisons (Task 2c.3)
+    "pytest-timeout>=2", # per-test timeouts for nightly E2E
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+pythonpath = ["python"]
+addopts = "-ra -q --strict-markers --timeout=900"
+markers = [
+    "nightly: slow end-to-end tests (>5 min)",
+    "linux_only: tests that only run on Linux",
+    "windows_only: tests that only run on Windows",
+    "windows_mingw: tests that require MinGW-w64 build on Windows",
+    "requires_tcsh: tests that need tcsh installed",
+    "requires_matlab: tests that need a MATLAB license",
+]

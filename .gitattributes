@@ -1,1 +1,17 @@
 Manual/* linguist-documentation
+
+# Golden test outputs must be byte-identical across all platforms.
+tests/golden/** binary
+
+# Line ending policy for source files
+*.py text eol=lf
+*.sh text eol=lf
+*.csh text eol=lf
+*.bash text eol=lf
+*.ps1 text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.cpp text eol=lf
+*.h   text eol=lf
+*.m   text eol=lf
+CMakeLists.txt text eol=lf
