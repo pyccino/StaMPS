@@ -61,37 +61,52 @@ def _default_c_locale(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv(var, "C")
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _ensure_synthetic_small_fixture() -> None:
-    """Build ``tests/fixtures/synthetic_ps_small`` (and its SB twin) on
-    first test-session use.
+@pytest.fixture(scope="session")
+def synthetic_ps_small_path() -> Path:
+    """Build (on first request) and return ``tests/fixtures/synthetic_ps_small``.
 
-    The 200x200 ``synthetic_ps`` / ``synthetic_sb`` trees are produced by
-    test_generate_fixtures.py (session-scope-free, on-demand) and locked
-    against a SHA256 manifest. The trimmed 20x20 ``_small`` variants are
-    NOT committed (same rationale as the full-size ones: generator is the
-    source of truth, output is reproducible byte-for-byte from the seed)
-    and are only needed by nightly-E2E + PHASE→StaMPS integration tests.
+    The 200x200 ``synthetic_ps`` tree is produced by test_generate_fixtures.py
+    (session-scope-free, on-demand) and locked against a SHA256 manifest. The
+    trimmed 20x20 ``_small`` variant is NOT committed (same rationale as the
+    full-size one: generator is the source of truth, output is reproducible
+    byte-for-byte from the seed) and is only needed by nightly-E2E +
+    PHASE→StaMPS integration tests.
 
-    Running this as an autouse session fixture avoids any workflow edits
-    — the nightly-e2e.yml / ci.yml jobs stay untouched. The build is
-    skipped if the directories already exist, so dev loop cost is zero
-    after the first run.
+    Opt-in (not autouse) so unit-only pytest runs don't pay the build cost.
+    Request this fixture explicitly from tests that need the small PS tree;
+    the build is skipped if the directory already exists, so dev loop cost
+    is zero after the first run.
     """
     from tests.fixtures.generate_fixtures import (
         SMALL_LENGTH,
         SMALL_WIDTH,
         generate_ps_fixture,
+    )
+
+    ps_small = STAMPS_ROOT / "tests" / "fixtures" / "synthetic_ps_small"
+    if not ps_small.exists():
+        generate_ps_fixture(ps_small, width=SMALL_WIDTH, length=SMALL_LENGTH)
+    return ps_small
+
+
+@pytest.fixture(scope="session")
+def synthetic_sb_small_path() -> Path:
+    """Build (on first request) and return ``tests/fixtures/synthetic_sb_small``.
+
+    SB sibling of ``synthetic_ps_small_path`` — same opt-in semantics, same
+    deterministic seed, same 20x20 raster geometry. Request explicitly from
+    nightly-E2E / PHASE→StaMPS integration tests that exercise the SB path.
+    """
+    from tests.fixtures.generate_fixtures import (
+        SMALL_LENGTH,
+        SMALL_WIDTH,
         generate_sb_fixture,
     )
 
-    fixtures_root = STAMPS_ROOT / "tests" / "fixtures"
-    ps_small = fixtures_root / "synthetic_ps_small"
-    sb_small = fixtures_root / "synthetic_sb_small"
-    if not ps_small.exists():
-        generate_ps_fixture(ps_small, width=SMALL_WIDTH, length=SMALL_LENGTH)
+    sb_small = STAMPS_ROOT / "tests" / "fixtures" / "synthetic_sb_small"
     if not sb_small.exists():
         generate_sb_fixture(sb_small, width=SMALL_WIDTH, length=SMALL_LENGTH)
+    return sb_small
 
 
 @pytest.fixture(scope="session")
