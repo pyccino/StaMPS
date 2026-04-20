@@ -249,7 +249,8 @@ try {
 
 
   filebuf *pbuf;
-  long size;
+  std::streamoff size;   // [LLP64] pubseekoff returns streamoff; `long` is
+                         // 32-bit on Win64 and truncates SLCs >= 2 GiB.
   long numlines;
 
   // get pointer to associated buffer object
@@ -258,7 +259,11 @@ try {
   // get file size using buffer's members
   size=pbuf->pubseekoff (0,ios::end,ios::in);
   pbuf->pubseekpos (0,ios::in);
-  numlines=size/width/sizeof(float)/2;
+  // Keep the division in streamoff (sizeof is size_t and would convert the
+  // signed streamoff to unsigned) and narrow once at the final assignment.
+  numlines = static_cast<long>(size / width
+                               / static_cast<std::streamoff>(sizeof(float))
+                               / 2);
 
   cout << "number of lines per file = " << numlines << "\n";
 

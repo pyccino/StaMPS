@@ -310,7 +310,8 @@ try {
   const int patch_amp_linebytes =  patch_width*sizeofelement;
 
   filebuf *pbuf;
-  long size;
+  std::streamoff size;   // [LLP64] pubseekoff returns streamoff; `long` is
+                         // 32-bit on Win64 and truncates SLCs >= 2 GiB.
   long numlines;
 
   // get pointer to associated buffer object
@@ -319,7 +320,9 @@ try {
   // get file size using buffer's members
   size=pbuf->pubseekoff (0,ios::end,ios::in);
   pbuf->pubseekpos (0,ios::in);
-  numlines=size/width/sizeofelement/2;
+  // sizeofelement is int, so the whole chain stays signed streamoff; narrow
+  // once at the final assignment.
+  numlines = static_cast<long>(size / width / sizeofelement / 2);
 
   cout << "number of lines per file = " << numlines << "\n";
 
