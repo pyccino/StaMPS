@@ -129,9 +129,16 @@ jobs:
         run: |
           git archive --format=tar.gz --prefix=stamps-src/ HEAD > stamps-src.tar.gz
           sha256sum stamps-src.tar.gz > SHA256SUMS-src
+      - name: Render release notes (substitute __VERSION__ for tag name)
+        run: |
+          # github.ref_name is the tag (e.g. "v1.0.0") on tag-triggered runs
+          sed "s/__VERSION__/${{ github.ref_name }}/g" \
+            .github/release-template.md > release-body.md
+          cat release-body.md
       - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
-          generate_release_notes: true
+          body_path: release-body.md
+          generate_release_notes: false   # use our template; autoList not desired
           files: |
             artifacts/stamps-windows-x64-msvc.zip
             artifacts/stamps-windows-x64-mingw.zip
