@@ -13,7 +13,7 @@ test = [
     "pytest>=7",
     "hypothesis>=6",
     "numpy>=1.24",       # ulp-tolerant golden comparisons (Task 2c.3)
-    "pytest-timeout>=2", # per-test timeouts for nightly E2E
+    "pytest-timeout>=2.3.0", # hard per-test timeout offsets Hypothesis deadline=None
 ]
 
 # Package discovery: the `stamps` package lives at python/stamps/, not at
@@ -28,7 +28,7 @@ where = ["python"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["python"]
-addopts = "-ra -q --strict-markers --timeout=900"
+addopts = "-ra -q --strict-markers --timeout=120"
 markers = [
     "nightly: slow end-to-end tests (>5 min)",
     "slow: slower tests (tens of seconds to minutes) — e.g. external builds",

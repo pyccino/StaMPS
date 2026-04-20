@@ -36,6 +36,13 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     requires_matlab / windows_mingw based on the host. Keeps the marker-aware
     tests implicit (no per-test skipif boilerplate) and matches the PHASE-side
     conftest.
+
+    Also widens the default 120s per-test timeout (see `addopts` in
+    pyproject.toml) to 900s for tests marked `nightly`; those shell out to
+    MATLAB / full pipeline runs with 300-600s subprocess budgets of their own.
+    The tight default exists to bound Hypothesis property tests whose
+    deadline=None was set to dodge Windows-CI flakes — so the hard
+    pytest-timeout is now the only runaway-loop safeguard.
     """
     skip_non_linux = pytest.mark.skip(reason="test marked linux_only; host is not Linux")
     skip_non_windows = pytest.mark.skip(reason="test marked windows_only; host is not Windows")
@@ -58,6 +65,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(pytest.mark.skip(reason="requires_matlab: matlab not on PATH"))
         if "windows_mingw" in item.keywords and not is_windows_mingw:
             item.add_marker(pytest.mark.skip(reason="windows_mingw: requires Windows + MinGW"))
+        if "nightly" in item.keywords:
+            item.add_marker(pytest.mark.timeout(900))
 
 
 @pytest.fixture(scope="session")
