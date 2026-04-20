@@ -48,12 +48,15 @@ def _parse_patch_list(list_path: Path) -> list[str]:
 
     - Iterate by lines (not whitespace) — csh's backtick-cat respects lines.
     - Robust to CRLF via splitlines().
-    - UTF-8 encoding so non-ASCII directory names round-trip on Windows hosts.
+    - UTF-8-SIG encoding so non-ASCII directory names round-trip on Windows
+      hosts AND a leading UTF-8 BOM (as SNAP sometimes emits on Windows) is
+      transparently stripped. Without `-sig`, the BOM would appear as \ufeff
+      at the head of the first patch name and break the subsequent cwd=patch_dir.
     - Skip blank lines and comment lines starting with '#'. csh doesn't support
       comments here, but neither does it choke on an unused extra line; this is
       a friendly extension.
     """
-    text = list_path.read_text(encoding="utf-8")
+    text = list_path.read_text(encoding="utf-8-sig")
     out: list[str] = []
     for raw in text.splitlines():
         line = raw.strip()

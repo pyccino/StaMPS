@@ -417,6 +417,29 @@ def test_patch_list_crlf_robust(tmp_path, monkeypatch):
     assert seen == {"PATCH_1", "PATCH_2"}
 
 
+def test_patch_list_utf8_bom_stripped(tmp_path):
+    """patch.list with leading UTF-8 BOM: BOM must not leak into first patch name.
+
+    SNAP on Windows sometimes writes text files with a UTF-8 BOM (\\xef\\xbb\\xbf).
+    Without encoding="utf-8-sig" the first patch name would be "\\ufeffPATCH_1"
+    and the subsequent `workdir / patch` would try to cd into a nonexistent dir.
+    """
+    from stamps.mt_extract_cands import _parse_patch_list
+
+    list_path = tmp_path / "patch.list"
+    list_path.write_bytes(b"\xef\xbb\xbfPATCH_1\nPATCH_2\n")
+    assert _parse_patch_list(list_path) == ["PATCH_1", "PATCH_2"]
+
+
+def test_patch_list_trailing_whitespace_stripped(tmp_path):
+    """Per-line trailing whitespace (spaces, tabs) and blank lines are stripped."""
+    from stamps.mt_extract_cands import _parse_patch_list
+
+    list_path = tmp_path / "patch.list"
+    list_path.write_text("PATCH_1   \n  PATCH_2\t\n\n", encoding="utf-8")
+    assert _parse_patch_list(list_path) == ["PATCH_1", "PATCH_2"]
+
+
 def test_patch_list_encoding_utf8(tmp_path, monkeypatch):
     """Non-ASCII patch names (é, ß) round-trip through UTF-8 patch.list."""
     _setup_env(tmp_path, monkeypatch)
