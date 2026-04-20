@@ -30,19 +30,24 @@ using namespace std;
 #include <cstdio>
 using namespace std;     
 
-#include <cstdlib>     
-using namespace std;     
+#include <cstdlib>
+using namespace std;
+
+#include <cstdint>
+
+#include "stamps_locale.h"
 
 // =======================================================================
-// Start of program 
+// Start of program
 // =======================================================================
 
-//int main(long  argc, char *argv[] ) {    
+//int main(long  argc, char *argv[] ) {
 int main(int  argc, char *argv[] ) {    // [MA]  long --> int for gcc 4.3.x
+  STAMPS_PIN_C_LOCALE();
 
 
 try {
- 
+
   if (argc < 2)
   {	  
      cout << "Usage: pscdem pscands.1.ij pscands.1.hgt precision" << endl << endl;
@@ -73,13 +78,15 @@ try {
   else prec = argv[4];
 
   ifstream parmfile (argv[1], ios::in);
-  if (! parmfile.is_open()) 
+  parmfile.imbue(std::locale::classic());
+  if (! parmfile.is_open())
   {	  
       cout << "pscdem: Error opening file " << argv[1] << endl; 
       throw "";
   }    
 
   ifstream psfile (ijname, ios::in|ios::binary);
+  psfile.imbue(std::locale::classic());
   cout << "opening " << ijname << "...\n";
 
   if (! psfile.is_open())
@@ -89,7 +96,8 @@ try {
   }
 
   ofstream outfile(outfilename,ios::out);
-  if (! outfile.is_open()) 
+  outfile.imbue(std::locale::classic());
+  if (! outfile.is_open())
   {	  
       cout << "pscdem: Error opening file " << outfilename << endl; 
       throw "";
@@ -109,6 +117,7 @@ try {
       
   parmfile >> ifgfilename;
   ifgfile[0].open (ifgfilename, ios::in|ios::binary);
+  ifgfile[0].imbue(std::locale::classic());
   cout << "pscdem: opening " << ifgfilename << "...\n";
 
   int nodem_sw = 0;   
@@ -119,9 +128,9 @@ try {
   }
 
   char header[32];
-  long magic=0x59a66a95;
+  int32_t magic=0x59a66a95;
   ifgfile[0].read(header,32);
-  if (*reinterpret_cast<long*>(header) == magic)
+  if (*reinterpret_cast<int32_t*>(header) == magic)
       cout << "pscdem: sun raster file - skipping header\n";
   else ifgfile[0].seekg(ios::beg); 
   

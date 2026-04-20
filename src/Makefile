@@ -1,3 +1,7 @@
+# DEPRECATED: This Makefile is retained only for backward compatibility.
+# The authoritative build system is CMakeLists.txt in this directory.
+# Run `cmake -B build && cmake --build build` instead of `make`.
+#
 #################################################################
 # "make [all]"		all exe's				#
 # "make prog.o"		compile only prog.o			#
@@ -119,10 +123,6 @@ uninstall:	cleaner
         	if test -d $$dir; then \
 		  cd $(INSTALL_DIR); rm -f $(PROGS) $(CYGWIN_EXE); \
 		  echo "* Removed executables in install dir: $(INSTALL_DIR)."; fi;
-
-### How to make object files ###
-.cc.o:		
-	$(CC) $(CFLAGS) -c -o $(@) $<
 
 ### EOF.
 

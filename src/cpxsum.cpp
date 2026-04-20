@@ -25,8 +25,12 @@ using namespace std;
 
 #include <cstdlib>  // [MA] gcc 4.3.x for exit and atoi
 
-int main(int  argc, char *argv[] )    
+#include "stamps_locale.h"
+
+int main(int  argc, char *argv[] )
+
 {
+  STAMPS_PIN_C_LOCALE();
   cout << "\ncpxsum, Andy Hooper, July 2006\n\n";
 
   int i,j,nlf,width,sumflag,normflag;
@@ -75,6 +79,7 @@ int main(int  argc, char *argv[] )
     ifstream fpin1;
     //cout << "opening " << infile1 << "...\n";
     fpin1.open (infile1, ios::in|ios::binary);
+    fpin1.imbue(std::locale::classic());
     if (! fpin1.is_open())
     {
         cout << "Error opening file " << infile1 << "\n";
@@ -85,6 +90,7 @@ int main(int  argc, char *argv[] )
     ifstream fpin2;
     //cout << "opening " << infile2 << "...\n";
     fpin2.open (infile2, ios::in|ios::binary);
+    fpin2.imbue(std::locale::classic());
     if (! fpin2.is_open())
     {
         cout << "Error opening file " << infile2 << "\n";
@@ -94,6 +100,7 @@ int main(int  argc, char *argv[] )
     ofstream fpout;
     //cout << "opening " << outfile << "...\n";
     fpout.open (outfile, ios::out);
+    fpout.imbue(std::locale::classic());
     if (! fpout.is_open())
     {
         cout << "Error opening file " << outfile << "\n";
