@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: ['windows-port/**']
+  pull_request:
+    branches: ['windows-port/**']
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake tcsh gawk
+      - name: Configure
+        run: cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release
+      - name: CTest smoke
+        run: ctest --test-dir build --output-on-failure
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with: { python-version: "3.11" }
+      - name: pytest (with test extras)
+        run: pip install .[test] && python -m pytest tests/ -v
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - run: brew install cmake
+      - run: cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --config Release
+      - run: ctest --test-dir build --output-on-failure
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with: { python-version: "3.11" }
+      - run: pip install .[test] && python -m pytest tests/ -v
+
+  build-windows-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - name: Configure (MSVC)
+        run: cmake -S src -B build -G "Visual Studio 17 2022" -A x64
+      - name: Build
+        run: cmake --build build --config Release
+      - name: CTest smoke
+        run: ctest --test-dir build -C Release --output-on-failure
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with: { python-version: "3.11" }
+      - run: pip install .[test] && python -m pytest tests/ -v
+
+  build-windows-mingw:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - uses: msys2/setup-msys2@7a01b3e41d0a0e9d3e2e4e9c8b5e9a7b5f7d8c1f  # v2.24.1
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-python
+      - name: Configure + build (MinGW)
+        shell: msys2 {0}
+        run: |
+          cmake -S src -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+      - name: pytest (incl. byte-identity goldens on MinGW)
+        shell: msys2 {0}
+        run: |
+          # MinGW pytest verifies Linux-MinGW byte parity per spec §11 AC#3
+          python -m pip install --upgrade pip
+          python -m pip install .[test]
+          python -m pytest tests/ -v
+
+  # Italian-locale CI (validates spec's locale-invariance goal end-to-end,
+  # not just unit tests).
+  ci-italian-locale:
+    runs-on: windows-latest
+    continue-on-error: true   # best-effort; fails on runner locale-switch limitations
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - name: Set Italian locale
+        shell: pwsh
+        run: |
+          Set-WinSystemLocale it-IT
+          [System.Threading.Thread]::CurrentThread.CurrentCulture = 'it-IT'
+      - run: cmake -S src -B build -G "Visual Studio 17 2022" -A x64
+      - run: cmake --build build --config Release
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with: { python-version: "3.11" }
+      - run: pip install .[test]
+      - name: Run locale-sensitive subset under it-IT
+        env:
+          LC_ALL: it_IT.UTF-8
+          LC_NUMERIC: it_IT.UTF-8
+        run: python -m pytest tests/test_locale_pinning.py tests/test_par_parser.py -v
+
+  # Canary: minimal-deps Ubuntu (catches undocumented deps).
+  canary-ubuntu:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - name: Install only documented prereqs
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake python3 python3-pip
+      - run: cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build
+      - run: pip3 install .[test]
+      - run: python3 -m pytest tests/ -v -k "not requires_matlab and not requires_tcsh"
+
+  # Pre-commit enforcement: contributors who skip `pre-commit install`
+  # are still gated by CI. Catches ruff/mypy/pre-commit-hook violations
+  # that would otherwise reach main. Mirrors local hook config.
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with: { python-version: "3.11" }
+      - name: Install pre-commit
+        run: pip install pre-commit==3.8.0
+      - name: Run all hooks
+        run: pre-commit run --all-files --show-diff-on-failure
+
+  # VS 2026 early-test (GitHub Actions transitions windows-latest to this
+  # around May 2026). Update runner label + generator once transitioned.
+  build-windows-vs2026:
+    runs-on: windows-2025    # may be `windows-2026-preview` by execution time — verify
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c7418585596e4eae45bcf28972  # v4.1.6
+      - name: Configure (MSVC v144)
+        run: cmake -S src -B build -G "Visual Studio 18 2026" -A x64
+      - name: Build
+        run: cmake --build build --config Release
