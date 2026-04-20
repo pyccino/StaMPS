@@ -52,6 +52,11 @@ $env:LC_TIME    = "en_US.UTF-8"
 # Re-dot-sourcing must not append duplicates. Each entry is checked
 # individually so that partial overlaps (e.g. user already prepended
 # STAMPS\bin but not SNAPHU_BIN) don't skip the remaining entries.
+#
+# Comparison is done per-segment on `;`-split PATH with case-insensitive
+# exact match (Windows PATH is case-insensitive). A naive substring
+# test would false-positive when e.g. STAMPS\bin is C:\stamps\bin and
+# PATH already contains C:\stamps\bin\extras.
 $pathAdditions = @(
     "$env:STAMPS\bin",
     "$env:SNAPHU_BIN",
@@ -66,7 +71,8 @@ $pathAdditions = @(
 )
 foreach ($toAdd in $pathAdditions) {
     if ([string]::IsNullOrEmpty($toAdd)) { continue }
-    if ($env:PATH -notlike "*$toAdd*") {
+    $segments = $env:PATH -split ';' | Where-Object { $_ }
+    if ($segments -inotcontains $toAdd) {
         $env:PATH = "$toAdd;$env:PATH"
     }
 }
@@ -90,6 +96,9 @@ if ($env:MATLAB_EXE -and (Test-Path $env:MATLAB_EXE)) {
 
     # Step 3: registry
     if (-not $env:MATLAB_EXE) {
+        # Windows registry paths are case-insensitive, so "Mathworks"
+        # matches both "MathWorks" and "MATHWORKS" installations — no
+        # need to enumerate case variants here.
         $regHit = Get-ItemProperty -Path "HKLM:\SOFTWARE\Mathworks\MATLAB\*" -ErrorAction SilentlyContinue |
             ForEach-Object {
                 if ($_.MATLABROOT) { Join-Path $_.MATLABROOT 'bin\matlab.exe' }

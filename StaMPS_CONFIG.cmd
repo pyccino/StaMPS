@@ -11,13 +11,22 @@ rem the caller.
 rem
 rem This mirrors StaMPS_CONFIG.bash variable-for-variable.
 
-rem ---- Guard: must be running under cmd.exe ---------------------------
-rem CMDEXTVERSION is only defined inside cmd.exe (with command extensions
-rem enabled, which is the default since Windows 2000). Powershell, pwsh
-rem and other hosts do not set it.
+rem ---- Guard: must be running under cmd.exe with extensions enabled ---
+rem CMDEXTVERSION is set by cmd.exe when command extensions are on
+rem (default since Win2000), and unset when extensions are disabled
+rem (setlocal disableextensions, or cmd /e:off).
+rem OS is set to "Windows_NT" by cmd.exe on all modern Windows, and
+rem is NOT inherited by a non-cmd host like PowerShell. We use OS to
+rem distinguish "running outside cmd.exe" from "extensions disabled",
+rem so the diagnostic is accurate in both cases.
 if not defined CMDEXTVERSION (
-    echo This script must be invoked from cmd.exe via ^`call StaMPS_CONFIG.cmd^`.
-    echo For PowerShell use:  . .\StaMPS_CONFIG.ps1
+    if defined OS (
+        echo This script requires cmd.exe command extensions.
+        echo Re-run without ^`setlocal disableextensions^` or ^`cmd /e:off^`.
+    ) else (
+        echo This script must be invoked from cmd.exe via ^`call StaMPS_CONFIG.cmd^`.
+        echo For PowerShell use:  . .\StaMPS_CONFIG.ps1
+    )
     exit /b 1
 )
 
