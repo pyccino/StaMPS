@@ -33,15 +33,18 @@ using namespace std;
 
 #include <cstdint>
 
+#include "stamps_locale.h"
+
 // =======================================================================
-// Start of program 
+// Start of program
 // =======================================================================
 
-//int main(long  argc, char *argv[] ) {    
+//int main(long  argc, char *argv[] ) {
 int main(int  argc, char *argv[] ) {    // [MA]  long --> int for gcc 4.3.x
+  STAMPS_PIN_C_LOCALE();
 
 try {
- 
+
   if (argc < 2)
   {	  
      cout << "Usage: psclonlat parmfile pscands.1.ij pscands.1.ll" << endl << endl;
@@ -68,13 +71,15 @@ try {
 
      
   ifstream parmfile (argv[1], ios::in);
-  if (! parmfile.is_open()) 
+  parmfile.imbue(std::locale::classic());
+  if (! parmfile.is_open())
   {	  
       cout << "Error opening file " << argv[1] << endl; 
       throw "";
   }    
 
   ifstream psfile (ijname, ios::in|ios::binary);
+  psfile.imbue(std::locale::classic());
   cout << "opening " << ijname << "...\n";
 
   if (! psfile.is_open())
@@ -84,7 +89,8 @@ try {
   }
 
   ofstream outfile(outfilename,ios::out);
-  if (! outfile.is_open()) 
+  outfile.imbue(std::locale::classic());
+  if (! outfile.is_open())
   {	  
       cout << "Error opening file " << outfilename << endl; 
       throw "";
@@ -106,6 +112,7 @@ try {
   {
     parmfile >> ifgfilename;
     ifgfile[i].open (ifgfilename, ios::in|ios::binary);
+    ifgfile[i].imbue(std::locale::classic());
     cout << "opening " << ifgfilename << "...\n";
 
     if (! ifgfile[i].is_open())

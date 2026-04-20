@@ -32,8 +32,10 @@ using namespace std;
 #include <cstdlib>     
 using namespace std;     
 
-#include <complex>     
-using namespace std;     
+#include <complex>
+using namespace std;
+
+#include "stamps_locale.h"
 
 // =======================================================================
 // Start of program 
@@ -67,9 +69,10 @@ int cfloatswap( complex<float>* f )
 }
 
 int main(int  argc, char *argv[] ) {   // [MA]  long --> int for gcc 4.3.x
+  STAMPS_PIN_C_LOCALE();
 
 try {
- 
+
   if (argc < 3)
   {	  
      cout << "Usage: calamp parmfile.in width parmfile.out precision byteswap maskfile" << "\n";
@@ -106,20 +109,23 @@ try {
   int width = atoi(argv[2]);
 
   ifstream ampfiles (argv[1], ios::in);
-  if (! ampfiles.is_open()) 
+  ampfiles.imbue(std::locale::classic());
+  if (! ampfiles.is_open())
   {	  
       cout << "Error opening file " << argv[1] << "\n"; 
       throw "";
   }   
 
   ofstream parmfile (outfilename, ios::out);
-  if (! parmfile.is_open()) 
+  parmfile.imbue(std::locale::classic());
+  if (! parmfile.is_open())
   {	  
       cout << "Error opening file " << outfilename << "\n"; 
       throw "";
   }   
 
   ifstream maskfile (maskfilename, ios::in);
+  maskfile.imbue(std::locale::classic());
   char mask_exists = 0;
   if (maskfile.is_open())
   {
@@ -148,6 +154,7 @@ try {
   while (! ampfiles.eof() ) // loop over SLC names
   {
     ifstream maskfile (maskfilename, ios::in);
+    maskfile.imbue(std::locale::classic());
     char mask_exists = 0;
     if (maskfile.is_open())
     {
@@ -160,6 +167,7 @@ try {
     float calib_factor=0;
     cout << "opening " << ampfilename << "...\n";
     ifstream ampfile (ampfilename, ios::in|ios::binary);
+    ampfile.imbue(std::locale::classic());
 
     if (! ampfile.is_open())
     {	    
