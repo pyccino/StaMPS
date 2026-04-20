@@ -1,6 +1,6 @@
 # Developing the StaMPS Windows Port
 
-This guide is for contributors to the `phase-team/StaMPS-windows` fork.
+This guide is for contributors to the `pyccino/StaMPS` fork.
 For users, see `INSTALL.md`.
 
 ## Build from source — all 4 platforms
