@@ -112,9 +112,9 @@ int main(int  argc, char *argv[] )
  filebuf* pbuf=fpin1.rdbuf();
 
  // get file size using buffer's members
- long size=pbuf->pubseekoff (0,ios::end,ios::in);
+ std::streamoff size=pbuf->pubseekoff (0,ios::end,ios::in);
  pbuf->pubseekpos (0,ios::in);
- nlf=size/width/sizeof(complex<float>);
+ nlf=size/(static_cast<std::streamoff>(width)*sizeof(complex<float>));
 
  cout << "Number of lines in " << infile1 << " = " << nlf << "\n";
 
