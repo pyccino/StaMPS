@@ -41,11 +41,13 @@ using namespace std;
 #include <cstdlib>     
 using namespace std;     
 
-#include <climits>     
-using namespace std;     
+#include <climits>
+using namespace std;
+
+#include "stamps_locale.h"
 
 // =======================================================================
-// Start of program 
+// Start of program
 // =======================================================================
 int cshortswap( complex<short>* f )
 {
@@ -109,11 +111,12 @@ int longswap( int32_t* f )
   f[0]=f2;
 }
 
-//int main(long  argc, char *argv[] ) {    
-int main(int  argc, char *argv[] ) {   // [MA]  long --> int for gcc 4.3.x 
+//int main(long  argc, char *argv[] ) {
+int main(int  argc, char *argv[] ) {   // [MA]  long --> int for gcc 4.3.x
+  STAMPS_PIN_C_LOCALE();
 
 try {
- 
+
   if (argc < 3)
   {	  
      cout << "Usage: selpsc parmfile patch.in pscands.1.ij pscands.1.da mean_amp.flt precision byteswap maskfile " << endl << endl;
@@ -189,7 +192,8 @@ try {
   else
   { 
       ifstream masterparmfile (argv[9], ios::in);
-      if (! masterparmfile.is_open()) 
+      masterparmfile.imbue(std::locale::classic());
+      if (! masterparmfile.is_open())
       {	  
           cout << "Error opening file " << argv[9] << "\n"; 
           throw "";
@@ -198,14 +202,16 @@ try {
   }
 
   ifstream masterampfile (masterampfilename, ios::in);
-  if (masterampfile.is_open()) 
+  masterampfile.imbue(std::locale::classic());
+  if (masterampfile.is_open())
   {	  
       masteramp_exists=1;
       cout << "opening " << masterampfilename << "...\n";
   }    
      
   ifstream parmfile (argv[1], ios::in);
-  if (! parmfile.is_open()) 
+  parmfile.imbue(std::locale::classic());
+  if (! parmfile.is_open())
   {	  
       cout << "Error opening file " << argv[1] << "\n"; 
       throw "";
@@ -247,6 +253,7 @@ try {
   {
     parmfile >> ampfilename >> calib_factor[i];
     ampfile[i].open (ampfilename, ios::in|ios::binary);
+    ampfile[i].imbue(std::locale::classic());
     cout << "opening " << ampfilename << "...\n";
 
     if (! ampfile[i].is_open())
@@ -267,7 +274,8 @@ try {
   cout << "number of amplitude files = " << num_files << "\n";
 
   ifstream patchfile (argv[2], ios::in);
-  if (! patchfile.is_open()) 
+  patchfile.imbue(std::locale::classic());
+  if (! patchfile.is_open())
   {	  
       cout << "Error opening file " << argv[2] << "\n"; 
       throw "";
@@ -316,8 +324,9 @@ try {
   cout << "patch width = " << patch_width  <<  endl;
 
   ifstream maskfile (maskfilename, ios::in);
+  maskfile.imbue(std::locale::classic());
   char mask_exists = 0;
-  if (maskfile.is_open()) 
+  if (maskfile.is_open())
   {	  
       mask_exists=1;
       cout << "opening " << maskfilename << "...\n";
@@ -326,10 +335,15 @@ try {
   
   
   ofstream ijfile(ijname,ios::out);
+  ijfile.imbue(std::locale::classic());
   ofstream jifile(jiname,ios::out);
+  jifile.imbue(std::locale::classic());
   ofstream ijfile0(ijname0,ios::out);
+  ijfile0.imbue(std::locale::classic());
   ofstream daoutfile(daoutname,ios::out);
+  daoutfile.imbue(std::locale::classic());
   ofstream meanoutfile(meanoutname,ios::out);
+  meanoutfile.imbue(std::locale::classic());
  
   //complex<float>* buffer = new complex<float>[num_files*width]; // used to store 1 line of all amp files
   char* buffer = new char[num_files*patch_linebytes]; // used to store 1 line of all amp files
