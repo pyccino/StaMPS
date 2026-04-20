@@ -141,12 +141,15 @@ try {
   psfile >> pscid >> y >> x;
   psfile.getline(buffer,1000);
 
-  long xyaddr_save = 0;
+  std::streamoff xyaddr_save = 0;
 
   while (! psfile.eof() )
   //for (int dummyi=0; dummyi<100; dummyi++)
   {
-    long xyaddr = (y*width+x)*sizeof(float);
+    // Promote to streamoff before the multiplication so the offset is
+    // computed in 64-bit arithmetic on LLP64 targets (Win64), where
+    // int*int overflows for large rasters and `long` is only 32 bits.
+    std::streamoff xyaddr = (static_cast<std::streamoff>(y)*width+x)*sizeof(float);
 
     for ( int i=0; i<num_files; i++)
     {
@@ -166,10 +169,10 @@ try {
   }
   catch( char * str ) {
      cout << str << "\n";
-     return(999);
+     return 1;
   }
   catch( ... ) {
-    return(999);
+    return 1;
   }
 
   return(0);
