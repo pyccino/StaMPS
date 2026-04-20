@@ -1895,5 +1895,18 @@ Links to PDF files for  the references above can be found at:\\
 
 
 
+\section{Windows native support (SNAP path)}
+\label{sec:windows}
+
+Starting with release v1.0.0 of the Windows port fork
+(\url{https://github.com/phase-team/StaMPS-windows}), StaMPS runs natively
+on Windows 10/11 for the SNAP preprocessor path. See \texttt{INSTALL.md}
+in the repository for step-by-step setup. Known limitations:
+
+\begin{itemize}
+  \item \texttt{dismph} (X11/Motif viewer) is Linux/macOS only.
+  \item DORIS, ROI\_PAC, GAMMA, ISCE preprocessor paths remain Linux-only.
+  \item TRAIN atmospheric corrections are not ported to Windows.
+\end{itemize}
 
 \end{document}
