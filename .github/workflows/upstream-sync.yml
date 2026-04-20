@@ -1,0 +1,51 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'   # Monday 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      has_new_commits: ${{ steps.check.outputs.changed }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with: { fetch-depth: 0 }
+      - name: Check upstream for new commits
+        id: check
+        run: |
+          git remote add upstream https://github.com/dbekaert/StaMPS.git || true
+          git fetch upstream master
+          UPSTREAM=$(git rev-parse upstream/master)
+          LOCAL=$(git rev-parse origin/windows-port/main)
+          BASE=$(git merge-base "$UPSTREAM" "$LOCAL")
+          if [ "$UPSTREAM" = "$BASE" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+  open-pr:
+    needs: check-upstream
+    if: needs.check-upstream.outputs.has_new_commits == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with: { fetch-depth: 0 }
+      - name: Create sync branch
+        run: |
+          git remote add upstream https://github.com/dbekaert/StaMPS.git || true
+          git fetch upstream master
+          git checkout -b sync/upstream-$(date +%Y%m%d)
+          git merge upstream/master --no-edit --no-ff
+          git push -u origin HEAD
+      - uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f  # v7.0.5
+        with:
+          title: "chore: sync with dbekaert/StaMPS master"
+          body: "Automated weekly sync. Review merge conflicts and CI results before merging."
+          base: windows-port/main
