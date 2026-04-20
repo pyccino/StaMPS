@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -151,3 +152,92 @@ def test_long_path_prefix_windows(monkeypatch):
 def test_long_path_short_path_unchanged():
     p = Path("/tmp/short")
     assert long_path(p) == p
+
+
+def test_rm_rf_glob_handles_readonly_file(tmp_path: Path):
+    """rm_rf_glob must clear read-only flags before unlinking.
+
+    Windows CreateFile refuses DELETE on FILE_ATTRIBUTE_READONLY files
+    (raises PermissionError). The same chmod-then-retry path runs on
+    Linux/macOS harmlessly — rmtree there doesn't actually need the
+    workaround, but exercising the code path everywhere guards against
+    Windows-only regressions that would otherwise only surface in CI.
+    """
+    # Pattern depth check needs ≥3 absolute-path components.
+    deep_parent = tmp_path / "a" / "b"
+    deep_parent.mkdir(parents=True)
+
+    # Top-level read-only file matched directly.
+    ro_file = deep_parent / "ro_file.txt"
+    ro_file.write_text("ro")
+    os.chmod(ro_file, stat.S_IREAD)
+
+    # A directory containing a read-only file (exercises rmtree's onerror).
+    ro_subdir = deep_parent / "ro_dir"
+    ro_subdir.mkdir()
+    nested = ro_subdir / "nested.txt"
+    nested.write_text("ro")
+    os.chmod(nested, stat.S_IREAD)
+
+    try:
+        rm_rf_glob(deep_parent / "ro_*")
+    finally:
+        # Restore perms so the tmp_path cleanup doesn't fail on Windows
+        # if the test itself blew up before rm_rf_glob finished.
+        for leftover in (ro_file, nested):
+            if leftover.exists():
+                os.chmod(leftover, stat.S_IWRITE | stat.S_IREAD)
+
+    assert not ro_file.exists()
+    assert not ro_subdir.exists()
+
+
+@pytest.mark.windows_only
+def test_long_path_forward_slash_unc_windows():
+    """//server/share long paths must normalize to \\\\?\\UNC\\server\\share\\..."""
+    p = "//server/share/" + ("x" * 300)
+    got = str(long_path(p))
+    assert got.startswith(
+        "\\\\?\\UNC\\server\\share\\"
+    ), f"Expected \\\\?\\UNC\\server\\share\\... prefix, got: {got!r}"
+
+
+def test_rm_rf_glob_handles_readonly_directory(tmp_path: Path):
+    """rm_rf_glob must remove a directory that itself has read-only mode.
+
+    A parent dir whose permission bits are S_IREAD (no write) can still
+    be unlinked on POSIX when its own parent is writable, but shutil.rmtree
+    will hit PermissionError while trying to remove the entries inside if
+    the dir also lacks write permission. On Windows, a directory with
+    FILE_ATTRIBUTE_READONLY can resist deletion outright. The handler
+    must chmod+retry so the dir goes away regardless.
+    """
+    # Pattern depth check needs ≥3 absolute-path components.
+    deep_parent = tmp_path / "a" / "b"
+    deep_parent.mkdir(parents=True)
+
+    ro_dir = deep_parent / "ro_dir"
+    ro_dir.mkdir()
+    # Populate it so rmtree has actual work to do under the read-only bit.
+    (ro_dir / "inside.txt").write_text("x")
+    # Strip write permission from the directory itself.
+    os.chmod(ro_dir, stat.S_IREAD | stat.S_IEXEC)
+
+    try:
+        rm_rf_glob(deep_parent / "ro_*")
+    finally:
+        # Restore perms so tmp_path cleanup never blocks, even if the
+        # assertion below fires.
+        if ro_dir.exists():
+            os.chmod(ro_dir, stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
+
+    assert not ro_dir.exists()
+
+
+def test_long_path_does_not_mangle_file_uri():
+    """long_path must not rewrite forward slashes inside a file:// URI."""
+    uri = "file:///C:/foo/bar/" + ("x" * 300)
+    # Pass as str to avoid Path() munging the URI on non-Windows.
+    got = str(long_path(uri))
+    assert "/" in got, f"forward slashes were rewritten in URI: {got!r}"
+    assert "\\\\?\\" not in got, f"URI should not get \\\\?\\ prefix: {got!r}"

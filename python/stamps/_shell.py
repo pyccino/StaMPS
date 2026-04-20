@@ -12,8 +12,93 @@ import glob as _glob
 import locale
 import os
 import shutil
+import stat
+import sys
 import time
 from pathlib import Path
+
+
+def _chmod_tree_writable(root: Path) -> None:
+    """Walk *root* and restore owner-writable modes.
+
+    Read-only directories block their own contents from being unlinked;
+    read-only files resist unlink on Windows. Pre-walking is the most
+    robust fix: by the time ``shutil.rmtree`` starts, every entry is
+    already writable, so its ``onexc`` handler only needs to catch
+    surprises (races, concurrent access). os.walk(topdown=True) lets us
+    chmod a directory *before* we try to descend into it.
+
+    Best-effort: chmod errors are swallowed. The subsequent rmtree will
+    surface any genuine failure.
+    """
+    try:
+        os.chmod(root, stat.S_IRWXU)
+    except OSError:
+        pass
+    for dirpath, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
+        for name in dirnames:
+            try:
+                os.chmod(os.path.join(dirpath, name), stat.S_IRWXU)
+            except OSError:
+                pass
+        for name in filenames:
+            try:
+                os.chmod(os.path.join(dirpath, name), stat.S_IWRITE | stat.S_IREAD)
+            except OSError:
+                pass
+
+
+def _force_remove(path: Path) -> None:
+    """Remove a file or directory tree, tolerating read-only entries.
+
+    Windows refuses to delete files flagged FILE_ATTRIBUTE_READONLY; the
+    unlink/rmtree syscall raises PermissionError. The same trap exists
+    on POSIX for read-only directories (missing owner-write bit): the
+    dir's own entries cannot be unlinked until the dir itself has write.
+
+    Strategy: pre-walk the tree and restore writable modes, then call
+    rmtree. An ``onexc``/``onerror`` handler still runs as a safety net
+    for races (a file becoming read-only between our pre-walk and
+    rmtree's unlink). Symlinks are unlinked directly — never recursed
+    into.
+
+    Python 3.12 renamed ``shutil.rmtree(onerror=...)`` to
+    ``shutil.rmtree(onexc=...)`` with a slightly different callback
+    signature: ``onexc(func, path, exc)`` vs the legacy
+    ``onerror(func, path, exc_info)``. Passing ``onerror=`` on 3.12+
+    emits ``DeprecationWarning``, which breaks any CI that runs under
+    ``filterwarnings = error``. Branch on version; share the body.
+    """
+
+    def _handler(func, p):  # type: ignore[no-untyped-def]
+        mode = stat.S_IRWXU if os.path.isdir(p) else stat.S_IWRITE
+        try:
+            os.chmod(p, mode)
+        except OSError:
+            pass
+        if func in (os.unlink, os.rmdir, os.remove):
+            func(p)
+
+    if path.is_dir() and not path.is_symlink():
+        _chmod_tree_writable(path)
+        if sys.version_info >= (3, 12):
+
+            def onexc(func, p, _exc):  # type: ignore[no-untyped-def]
+                _handler(func, p)
+
+            shutil.rmtree(path, onexc=onexc)
+        else:
+
+            def onerror(func, p, _exc_info):  # type: ignore[no-untyped-def]
+                _handler(func, p)
+
+            shutil.rmtree(path, onerror=onerror)
+    elif path.exists() or path.is_symlink():
+        try:
+            path.unlink()
+        except PermissionError:
+            os.chmod(path, stat.S_IWRITE)
+            path.unlink()
 
 
 def sorted_glob(pattern: Path | str) -> list[Path]:
@@ -67,10 +152,10 @@ def rm_rf_glob(pattern: Path | str, retries: int = 3, backoff_s: float = 0.1) ->
     for victim in sorted_glob(p):
         for attempt in range(retries):
             try:
-                if victim.is_dir() and not victim.is_symlink():
-                    shutil.rmtree(victim)
-                else:
-                    victim.unlink(missing_ok=True)
+                _force_remove(victim)
+                break
+            except FileNotFoundError:
+                # Matches the prior unlink(missing_ok=True) contract.
                 break
             except PermissionError:
                 if attempt == retries - 1:
@@ -125,12 +210,18 @@ def _write_bytes_with_retry(
 
 
 def write_text_lf(path: Path | str, content: str) -> None:
-    """Write text with LF endings and ASCII encoding on every OS.
+    """Write text with LF endings and UTF-8 encoding on every OS.
 
-    Retries on PermissionError (OneDrive sync lock). Uses \\\\?\\ long-path
-    prefix on Windows paths > 240 chars.
+    Byte-identical to the prior ASCII encoder for the ASCII subset, so
+    existing csh-captured goldens don't drift. UTF-8 was chosen over
+    strict ASCII because SNAP-provided fields (orbit product names,
+    mission labels) may carry occasional non-ASCII whitespace; downstream
+    StaMPS C++ binaries treat the file contents as opaque byte streams
+    plus newline delimiters, so UTF-8 passthrough is safe. Retries on
+    PermissionError (OneDrive sync lock). Uses \\\\?\\ long-path prefix on
+    Windows paths > 240 chars.
     """
-    _write_bytes_with_retry(Path(path), content.encode("ascii"))
+    _write_bytes_with_retry(Path(path), content.encode("utf-8"))
 
 
 def write_text_for_cpp(path: Path | str, content: str) -> None:
@@ -160,14 +251,36 @@ def append_glob(out_path: Path | str, pattern: Path | str, preamble: str | None 
 def long_path(p: Path | str) -> Path:
     """On Windows, prepend \\\\?\\ to paths longer than 240 chars.
 
+    Accepts ``str | Path`` filesystem paths only. URIs (``file://``,
+    ``http://``, ``https://``) are not supported — callers must resolve
+    those to filesystem paths before calling. As a defensive guard
+    against URI-shaped strings leaking in, we skip the forward-slash
+    normalization when the input starts with a URI scheme prefix or is
+    already ``\\\\?\\``-prefixed.
+
     Allows CreateFileW-based APIs (Python's pathlib on Windows uses wide API)
     to exceed the 260-char MAX_PATH limit. On non-Windows, returns as-is.
+
+    Normalizes forward slashes to backslashes on Windows before the UNC
+    prefix check so inputs like ``//server/share/...`` are rewritten as
+    ``\\\\?\\UNC\\server\\share\\...``. Python's ``pathlib`` plus user
+    code frequently hand us mixed-separator strings on Windows; the
+    \\\\?\\ prefix requires native backslashes.
     """
     p = Path(p)
     if os.name != "nt":
         return p
     s = str(p)
-    if len(s) < 240 or s.startswith("\\\\?\\"):
+    # Defensive: don't mangle URIs (file:///C:/..., http://..., etc.) or
+    # already-prefixed long paths. Forward slashes there carry meaning
+    # we must not rewrite.
+    if s.startswith(("file:", "http:", "https:", "\\\\?\\")):
+        return p
+    # Normalize forward slashes so UNC detection (\\) matches //server/share
+    # and the final long-path prefix is well-formed (Windows \\?\ only
+    # accepts backslash separators).
+    s = s.replace("/", "\\")
+    if len(s) < 240:
         return p
     # Absolute paths only (relative paths can't use \\?\ prefix)
     if not p.is_absolute():
