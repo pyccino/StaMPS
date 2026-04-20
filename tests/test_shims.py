@@ -169,6 +169,8 @@ def test_bat_passes_utf8_args(stamps_root: Path, tmp_path: Path):
     ), f"argv byte mismatch: expected {expected!r}, got {proc.stderr!r}"
 
 
+@pytest.mark.windows_only
+@pytest.mark.skipif(os.name != "nt", reason="Windows shim")
 def test_bat_propagates_nonzero_exit_code(stamps_root: Path, tmp_path: Path):
     """Regression for commit 2683fe1: ``%ERRORLEVEL%`` inside an ``if (...)``
     block is expanded at parse-time, giving the pre-call value (usually 0).
