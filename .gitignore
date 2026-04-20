@@ -20,3 +20,8 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated synthetic SAR fixtures (produced by tests/fixtures/generate_fixtures.py).
+# The generator is committed; its deterministic output is not.
+tests/fixtures/synthetic_ps/
+tests/fixtures/synthetic_sb/
