@@ -104,10 +104,11 @@ The installer:
 2. Probes `HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled` and warns if disabled (see Section 6).
 3. Warns if the install path is inside OneDrive or contains non-ASCII characters.
 4. Fetches `stamps-windows-x64-msvc.zip` from the latest release of the detected repo (auto-detected from `remote.fork` or `remote.origin`; override with `-Repo pyccino/StaMPS`).
-5. Verifies `SHA256SUMS-msvc` against the downloaded zip.
-6. Verifies the Sigstore attestation via `gh attestation verify` (retries 3× on transient failure; override with `-IAcceptUnverifiedRisk` only if you accept the risk).
-7. Unpacks into `-InstallDir` (defaults to `$PSScriptRoot`).
-8. Builds Triangle from the vendored source under `external\triangle\`.
+5. Verifies `SHA256SUMS-msvc` against the downloaded zip. **Mandatory**: if the release asset is missing the installer aborts with exit code 3 unless `-IAcceptUnverifiedRisk` is passed.
+6. Verifies the Sigstore attestation via `gh attestation verify` (retries 3× on transient failure; override with `-IAcceptUnverifiedRisk` only if you accept the risk). When `gh` 2.50+ is present the OIDC issuer is pinned to `https://token.actions.githubusercontent.com`; older `gh` prints a warning that the trust root is not pinned.
+7. Refuses to overwrite an existing install (`bin\mt_prep_snap.bat` sentinel) unless `-Force` is passed; otherwise aborts with exit code 6.
+8. Unpacks into `-InstallDir` (defaults to `$PSScriptRoot`). The staging zip is removed in a `finally` block so partial downloads are cleaned on failure.
+9. Builds Triangle from the vendored source under `external\triangle\`.
 
 After install, dot-source the config in every new PowerShell session:
 
@@ -123,7 +124,9 @@ Switches:
 | `-Version v1.0.0` | Pin to a specific tag (default: `latest`). |
 | `-InstallDir D:\tools\StaMPS` | Install somewhere other than the script directory. |
 | `-SkipAttestation` | Skip Sigstore verification (SHA256 still enforced). |
-| `-IAcceptUnverifiedRisk` | Proceed if attestation verification fails 3×. |
+| `-IAcceptUnverifiedRisk` | Proceed if attestation verification fails 3×, **or** if the release is missing `SHA256SUMS-msvc`. HARD FAIL is the default. |
+| `-EnableLongPaths` | When elevated, set `HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled=1`. No-op with a warning when not elevated. |
+| `-Force` | Overwrite an existing install at `-InstallDir` (otherwise exit code 6). |
 | `-DryRun` | Run all probes without downloading or unpacking. |
 
 ---
