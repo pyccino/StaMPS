@@ -7,6 +7,33 @@ name = "stamps"
 version = "0.0.0"
 description = "StaMPS Python port (internal)"
 requires-python = ">=3.11"
+license = {text = "GPL-3.0-or-later"}
+readme = "README.md"
+authors = [
+    {name = "Andy Hooper"},
+    {name = "StaMPS contributors"},
+]
+maintainers = [
+    {name = "PHASE team", email = "samuel.bianchi193@gmail.com"},
+]
+keywords = ["insar", "interferometry", "stamps", "persistent-scatterers", "sar"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+
+[project.urls]
+Homepage = "https://github.com/pyccino/StaMPS"
+Documentation = "https://github.com/pyccino/StaMPS/blob/windows-port/main/README.md"
+Repository = "https://github.com/pyccino/StaMPS"
+Issues = "https://github.com/pyccino/StaMPS/issues"
+Changelog = "https://github.com/pyccino/StaMPS/blob/windows-port/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 test = [
@@ -14,6 +41,7 @@ test = [
     "hypothesis>=6",
     "numpy>=1.24",       # ulp-tolerant golden comparisons (Task 2c.3)
     "pytest-timeout>=2", # per-test timeouts for nightly E2E
+    "build==1.2.2",      # wheel-build smoke test (tests/test_wheel_metadata.py)
 ]
 
 # Package discovery: the `stamps` package lives at python/stamps/, not at
