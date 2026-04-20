@@ -189,17 +189,28 @@ def _write_bytes_with_retry(
     path: Path,
     data: bytes,
     schedule_s: tuple[float, ...] = _ONEDRIVE_BACKOFF_SCHEDULE_S,
+    mode: str = "wb",
 ) -> None:
-    """write_bytes with PermissionError retry (OneDrive sync lock mitigation).
+    """write_bytes/append with PermissionError retry (OneDrive sync lock mitigation).
 
     Sleeps schedule_s[attempt] before each retry. Re-raises after the
     final attempt so genuine permission errors still surface.
+
+    ``mode`` is either ``"wb"`` (truncate-and-write, default) or ``"ab"``
+    (binary append). Only binary modes are accepted — text-mode writes
+    would defeat the LF-only invariant this module enforces on Windows.
     """
+    if mode not in ("wb", "ab"):
+        raise ValueError(f"_write_bytes_with_retry: mode must be 'wb' or 'ab', got {mode!r}")
     p = long_path(path)
     last_exc: PermissionError | None = None
     for attempt, delay in enumerate(schedule_s):
         try:
-            p.write_bytes(data)
+            if mode == "wb":
+                p.write_bytes(data)
+            else:
+                with open(p, "ab") as fh:
+                    fh.write(data)
             return
         except PermissionError as e:
             last_exc = e
@@ -222,6 +233,22 @@ def write_text_lf(path: Path | str, content: str) -> None:
     Windows paths > 240 chars.
     """
     _write_bytes_with_retry(Path(path), content.encode("utf-8"))
+
+
+def append_text_lf(path: Path | str, text: str) -> None:
+    """Append text to a file with LF-only endings on every OS.
+
+    Opens the file in binary-append mode ("ab") and writes UTF-8-encoded
+    bytes so Windows text-mode newline translation can never introduce
+    \\r\\n into a file written by `write_text_lf()`. Creates the file if
+    it does not yet exist. Uses \\\\?\\ long-path prefix on Windows paths
+    > 240 chars. Retries on PermissionError (OneDrive sync lock) through
+    the shared `_write_bytes_with_retry` helper.
+
+    This is the append counterpart to `write_text_lf()` — use it instead
+    of `open(path, "a")` whenever a file must stay LF-only.
+    """
+    _write_bytes_with_retry(Path(path), text.encode("utf-8"), mode="ab")
 
 
 def write_text_for_cpp(path: Path | str, content: str) -> None:

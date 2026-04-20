@@ -24,6 +24,7 @@ from ._par import parse_par
 from ._paths import check_locale, resolve_bin, stamps_root
 from ._shell import (
     append_glob,  # noqa: F401 (API parity; available for downstream)
+    append_text_lf,
     mkdir_if_missing,
     rm_rf_glob,
     sorted_glob,
@@ -223,16 +224,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     diffs = sorted_glob(diff_pattern)
     if diffs:
-        with open(psc_in, "ab") as f:
-            f.write(("\n".join(str(d) for d in diffs) + "\n").encode("ascii"))
+        append_text_lf(psc_in, "\n".join(str(d) for d in diffs) + "\n")
 
     # pscdem.in
     dem_in = workdir / "pscdem.in"
     write_text_lf(dem_in, f"{width}\n")
     dems = sorted_glob(args.datadir / "geo" / "*dem.rdc")
     if dems:
-        with open(dem_in, "ab") as f:
-            f.write(("\n".join(str(d) for d in dems) + "\n").encode("ascii"))
+        append_text_lf(dem_in, "\n".join(str(d) for d in dems) + "\n")
 
     # psclonlat.in — csh `head -1` → FIRST sorted (distinct from gawk END).
     lons = sorted_glob(args.datadir / "geo" / "*.lon")
