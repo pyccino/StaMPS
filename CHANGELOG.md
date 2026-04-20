@@ -34,6 +34,14 @@ follows [Semantic Versioning](https://semver.org/).
   unchanged. Missing patch directories are reported as synthetic rc=-1
   instead of raising `FileNotFoundError`. `patch.list` parsing is hardened
   to tolerate UTF-8 BOM (SNAP on Windows) and per-line trailing whitespace.
+- `bin/mt_prep_snap.bat` + `bin/mt_extract_cands.bat` — force UTF-8
+  console code page (`chcp 65001`) at shim entry so non-ASCII argv
+  (CJK / accented Latin) survives the cmd.exe -> python.exe handoff
+  without codepage-437 mojibake; original CP is restored via a
+  `:_cleanup` label. Active CP is queried through PowerShell because
+  the `chcp` command's output text is localized on non-English Windows
+  (Italian "Pagina codici attiva: 437") and would break a naive
+  `for /f "tokens=2 delims=:"` parse.
 - `NOTICE` — corrected snaphu license statement from BSD-3-Clause to
   Stanford permissive + CS2 noncommercial (the embedded CS2 minimum-
   cost-flow solver is IG Systems and requires a separate commercial
@@ -52,6 +60,14 @@ follows [Semantic Versioning](https://semver.org/).
   uniformly.
 - PHASE: `MatlabFunctions/STmodel_DET2D.m` — added missing `isunix/.bat`
   branch for geoSplinter invocation (the one DET/STC variant missed).
+
+### Fixed
+- `bin/mt_prep_snap.bat` + `bin/mt_extract_cands.bat` — restored the
+  Microsoft Store Python-stub detection that was dropped during the
+  delayed-errorlevel refactor. On Windows hosts where `py -3` or
+  `python` resolves to the Store stub under `\WindowsApps\`, the shim
+  now fails fast with exit 9 and an actionable message instead of
+  silently popping the Store UI.
 
 ### Removed
 - `external/snaphu/snaphu-msvc.patch` — the prior patch was fabricated
