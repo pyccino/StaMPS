@@ -41,6 +41,14 @@ follows [Semantic Versioning](https://semver.org/).
 - PHASE: `MatlabFunctions/STmodel_DET2D.m` — added missing `isunix/.bat`
   branch for geoSplinter invocation (the one DET/STC variant missed).
 
+### Fixed
+- `bin/mt_prep_snap.bat` + `bin/mt_extract_cands.bat` — restored the
+  Microsoft Store Python-stub detection that was dropped during the
+  delayed-errorlevel refactor. On Windows hosts where `py -3` or
+  `python` resolves to the Store stub under `\WindowsApps\`, the shim
+  now fails fast with exit 9 and an actionable message instead of
+  silently popping the Store UI.
+
 ### Removed
 - `external/snaphu/snaphu-msvc.patch` — the prior patch was fabricated
   (hunks did not match snaphu v2.0.6) and a full MSVC port is out of

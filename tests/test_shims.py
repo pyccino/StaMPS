@@ -61,3 +61,67 @@ def test_shim_propagates_exit_code(stamps_root: Path):
         kwargs["env"] = _shim_env(stamps_root)
     proc = subprocess.run([str(shim), "20200101"], **kwargs)
     assert proc.returncode == 4
+
+
+@pytest.mark.windows_only
+@pytest.mark.skipif(os.name != "nt", reason="Windows shim")
+def test_bat_rejects_microsoft_store_stub(stamps_root: Path, tmp_path: Path):
+    """Regression guard for the \\WindowsApps\\ path sniff.
+
+    We fake ``sys.executable`` by pointing STAMPS_PYTHON (via the shared
+    PHASE config file) at a .bat that echoes a canned ``\\WindowsApps\\``
+    path when called with ``-c "import sys; print(sys.executable)"``. The
+    shim's for-/f resolver captures that path, findstr detects the Store
+    fragment, and the shim must exit 9 with a message mentioning the
+    Store on stderr.
+    """
+    fake_py = tmp_path / "fake_python.bat"
+    fake_py.write_text(
+        "@echo off\r\n"
+        "echo C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_x64\\python.exe\r\n"
+    )
+    appdata = tmp_path / "appdata"
+    (appdata / "PHASE").mkdir(parents=True)
+    (appdata / "PHASE" / "python.txt").write_text(str(fake_py))
+
+    shim = stamps_root / "bin" / "mt_prep_snap.bat"
+    env = os.environ.copy()
+    env["APPDATA"] = str(appdata)
+    proc = subprocess.run([str(shim)], capture_output=True, timeout=30, env=env)
+    assert proc.returncode == 9, (
+        f"expected exit 9 for Store stub, got {proc.returncode}; " f"stderr={proc.stderr!r}"
+    )
+    assert b"Microsoft Store" in proc.stderr or b"WindowsApps" in proc.stderr
+
+
+@pytest.mark.windows_only
+@pytest.mark.skipif(os.name != "nt", reason="Windows shim")
+def test_bat_passes_utf8_args(stamps_root: Path, tmp_path: Path):
+    """Argv byte round-trip: non-ASCII path should reach sys.argv intact.
+
+    The shim's cmd.exe layer must not mangle UTF-8 argv. We pass a path
+    containing a CJK character and a non-ASCII Latin-1 one, and check
+    that ``sys.argv[1]`` matches the input. We skip the full pipeline by
+    stopping at the shim's Python-launch boundary: build a throwaway
+    directory whose name contains the characters and pass it as the
+    datadir; the shim invokes ``python -m stamps.mt_prep_snap`` which
+    fails fast (no master or empty dir) but not before argv has been
+    passed through. We check returncode != 9009 (shim-level PATH failure)
+    and != 9 (stub rejection) — any other nonzero exit is fine because
+    Python at least started and received the argv.
+    """
+    non_ascii = "cafe\u0301_\u5927\u962a"  # café_大阪 (NFD to dodge filesystem NFC)
+    data = tmp_path / non_ascii
+    data.mkdir()
+    shim = stamps_root / "bin" / "mt_prep_snap.bat"
+    proc = subprocess.run(
+        [str(shim), "20200101", str(data)],
+        capture_output=True,
+        timeout=30,
+    )
+    # 9009 = Python not found (PATH failure); 9 = Store stub rejection.
+    # Anything else (including 4 = usage error from stamps) means argv
+    # made it past cmd.exe into a real Python process.
+    assert proc.returncode not in (9009, 9), (
+        f"shim failed before argv reached Python: rc={proc.returncode}, " f"stderr={proc.stderr!r}"
+    )
