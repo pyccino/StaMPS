@@ -24,13 +24,29 @@ end
 % get the number of interferograms
 if strcmpi(small_baseline_flag,'y')
     fprintf('Getting number of interferograms from SB processing path:\n')
-    [a,b] = system(['\ls -d [1,2]* | sed ''' 's/_/ /''' ' > small_baselines_considered.list']);
+    entries = dir('[12]*');
+    entries = entries([entries.isdir]);
+    entries = entries(arrayfun(@(e) ~isempty(regexp(e.name,'_','once')), entries));
+    names = sort({entries.name});
+    fid = fopen('small_baselines_considered.list', 'w');
+    for ii = 1:numel(names)
+        parts = regexp(names{ii}, '_', 'split');
+        fprintf(fid, '%s %s\n', parts{1}, parts{2});
+    end
+    fclose(fid);
     temp = load('small_baselines_considered.list');
     temp = [num2str(temp(:,1)) repmat('_',size(temp,1),1) num2str(temp(:,2))];
     n_ifg = size(temp,1);
 else
     fprintf('Getting number of interferograms from SM processing path:\n')
-    [a,b] = system(['\ls -d [1,2]*  > singlemaster_baselines_considered.list']);
+    entries = dir('[12]*');
+    entries = entries([entries.isdir]);
+    names = sort({entries.name});
+    fid = fopen('singlemaster_baselines_considered.list', 'w');
+    for ii = 1:numel(names)
+        fprintf(fid, '%s\n', names{ii});
+    end
+    fclose(fid);
     temp = num2str(load('singlemaster_baselines_considered.list'));
     n_ifg = size(temp,1);
 end
@@ -40,10 +56,14 @@ fprintf(['number of ifgs = ' num2str(n_ifg) '\n']);
 ifg_path = [temp(1,:) filesep 'interferogram.out'];
 clear temp
 fprintf(['Getting interferogram size from : ' ifg_path '\n'])
-[a,b]= system(['echo `grep ''Number\ of\ lines\ (multilooked):'' ' ifg_path ' | awk ''NR==1{print $5}''` > templines.txt' ]);
-n_lines = load('templines.txt');
-[a,b]= system(['echo `grep ''Number\ of\ pixels\ (multilooked):'' ' ifg_path ' | awk ''NR==1{print $5}''`  > temppixels.txt']);
-n_pixels = load('temppixels.txt');
+n_lines = sp_parse_ifg_dims(ifg_path, 'Number of lines (multilooked):');
+if ~isempty(n_lines)
+    writematrix(n_lines, 'templines.txt');
+end
+n_pixels = sp_parse_ifg_dims(ifg_path, 'Number of pixels (multilooked):');
+if ~isempty(n_pixels)
+    writematrix(n_pixels, 'temppixels.txt');
+end
 
 if isempty(n_lines) || isempty(n_pixels)
     fprintf('Will try width.txt and len.txt instead \n')

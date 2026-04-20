@@ -145,13 +145,13 @@ if ~isempty(ix_split_patches)
     n_cores = counter_cores;
 
     comandstr = 'echo logfile > log_stamps_overview';
-    system(comandstr);
+    sp_system(comandstr);
 
     for k=1:n_cores
         comandstr = (['matlab -nodesktop -nodisplay -r "stamps(' num2str(step_range(ix_split_patches(1)) ) ',' num2str(step_range(ix_split_patches(end))) ',' patches_flag_str ',' est_gamma_parm_str ',' '''patch_list_split_' num2str(k) ''',1  ); exit" > log_stamps_split_' num2str(k) ' & ' ]);
         comandstr2 = 'echo "${!}" >> log_stamps_overview';
         command = [comandstr comandstr2];
-        [a,b] = system(command);
+        [a,b] = sp_system(command);
         fprintf([num2str(k) 'Done, ... pausing 20s for next job launch \n'])
         pause(20)
     end
