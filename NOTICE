@@ -20,11 +20,23 @@ BUNDLED THIRD-PARTY COMPONENTS (in release zip stamps-windows-x64-*.zip):
 
 2. SNAPHU (Curtis Chen, Stanford University)
    Location:      external/snaphu/
-   License:       BSD-3-Clause (see external/snaphu/LICENSE)
+   License:       Stanford permissive (most of snaphu), PLUS a
+                  strictly-noncommercial sublicense for the embedded CS2
+                  minimum-cost-flow solver (A. V. Goldberg &
+                  B. Cherkassky, IG Systems, Inc.).
+                  See external/snaphu/LICENSE for full terms.
    Attribution:   C. W. Chen and H. A. Zebker, "Statistical-cost network-flow
                   approaches to two-dimensional phase unwrapping for radar
                   interferometry," 2001.
                   https://web.stanford.edu/group/radar/softwareandlinks/sw/snaphu/
+
+   IMPORTANT: The CS2-derived portion of snaphu is licensed for
+   noncommercial / evaluation use only. Commercial redistribution of
+   snaphu binaries containing CS2 requires a separate license from
+   IG Systems (igsys@eclipse.net). StaMPS itself (GPL v3) permits
+   commercial use, but the bundled snaphu binary does not — commercial
+   users must obtain a CS2 license or build snaphu without the CS2
+   solver.
 
 3. Original StaMPS (Andy Hooper et al., University of Leeds)
    License:       GPL v3 (see LICENSE)

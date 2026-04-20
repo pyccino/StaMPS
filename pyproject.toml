@@ -31,6 +31,7 @@ pythonpath = ["python"]
 addopts = "-ra -q --strict-markers --timeout=900"
 markers = [
     "nightly: slow end-to-end tests (>5 min)",
+    "slow: slower tests (tens of seconds to minutes) — e.g. external builds",
     "linux_only: tests that only run on Linux",
     "windows_only: tests that only run on Windows",
     "windows_mingw: tests that require MinGW-w64 build on Windows",
