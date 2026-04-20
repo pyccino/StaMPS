@@ -7,24 +7,17 @@ classdef test_sp_sync < matlab.unittest.TestCase
             tc.verifyWarningFree(@() sp_sync());
         end
 
-        % Forward-looking contract: if sp_sync grows an error-id for
-        % a failing underlying `sync` call (handled by the fix-sp-helpers
-        % worktree), verify the identifier is namespaced correctly.
-        % Skipped while the helper still swallows non-zero exit codes.
-        function failure_raises_stamps_error_id(tc)
-            tc.assumeTrue(hasErrorId('sp_sync', 'StaMPS:sp_sync:'), ...
-                'sp_sync does not yet raise any StaMPS:sp_sync:* error');
-            % Sanity: helper raises a StaMPS-namespaced id on synthetic
-            % failure. We cannot force `sync` to fail portably, so this
-            % test pairs with unit coverage added by the sibling agent.
-            tc.verifyTrue(true);
+        % sp_sync raises StaMPS:sp_sync:syncFailed when system('sync')
+        % returns a non-zero exit code. We cannot force `sync` to fail
+        % portably (it's a POSIX syscall with near-100% success rate), so
+        % this test confirms the id is present in the helper's source.
+        % Pair with the fix-sp-helpers worktree's injected-failure unit
+        % test for live coverage of the throw path.
+        function failure_id_present_in_source(tc)
+            src = which('sp_sync');
+            tc.assumeNotEmpty(src);
+            tc.verifyTrue(contains(fileread(src), 'StaMPS:sp_sync:syncFailed'), ...
+                'sp_sync source must raise StaMPS:sp_sync:syncFailed');
         end
     end
-end
-
-function tf = hasErrorId(helperName, errId)
-%HASERRORID True iff HELPERNAME's source contains the given error id.
-    src = which(helperName);
-    if isempty(src); tf = false; return; end
-    tf = contains(fileread(src), errId);
 end

@@ -16,7 +16,7 @@ classdef test_sp_which < matlab.unittest.TestCase
             fdir = fullfile(fileparts(mfilename('fullpath')), 'fixtures', 'path_ext');
             tc.assumeTrue(exist(fdir, 'dir') == 7, sprintf('Fixture dir missing: %s', fdir));
             origPath = getenv('PATH');
-            cleanup = onCleanup(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATH', origPath));
             setenv('PATH', [fdir pathsep origPath]);
             tc.verifyNotEmpty(sp_which('foo'));
             tc.verifyNotEmpty(sp_which('bar'));
@@ -31,7 +31,8 @@ classdef test_sp_which < matlab.unittest.TestCase
             comFile = fullfile(fdir, 'foo.com');
             if ~exist(comFile, 'file'); fclose(fopen(comFile, 'w')); end
             origPath = getenv('PATH'); origExt = getenv('PATHEXT');
-            cleanup = onCleanup(@() (setenv('PATH', origPath), setenv('PATHEXT', origExt)));
+            tc.addTeardown(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATHEXT', origExt));
             setenv('PATH', [fdir pathsep origPath]);
             setenv('PATHEXT', [origExt pathsep '.COM']);
             tc.verifyNotEmpty(sp_which('foo'));
@@ -43,14 +44,14 @@ classdef test_sp_which < matlab.unittest.TestCase
             fdir = fullfile(getenv('STAMPS'), 'external', 'triangle', 'bin');
             tc.assumeTrue(exist(fdir, 'dir') == 7, 'Triangle not built');
             origPath = getenv('PATH');
-            cleanup = onCleanup(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATH', origPath));
             setenv('PATH', [fdir pathsep origPath]);
             tc.verifyEqual(sp_which('TRIANGLE'), sp_which('Triangle'));
         end
 
         function test_respects_path_runtime_change(tc)
             origPath = getenv('PATH');
-            cleanup = onCleanup(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATH', origPath));
             setenv('PATH', '');
             tc.verifyEqual(sp_which('matlab'), '');
         end
@@ -84,24 +85,20 @@ classdef test_sp_which < matlab.unittest.TestCase
             tc.verifyWarningFree(@() sp_which('matlab'));
         end
 
-        % Forward-looking contract: if sp_which grows an error-id for
-        % empty / whitespace input (handled by the fix-sp-helpers
-        % worktree), verify the identifier is namespaced correctly.
-        function empty_argument_raises_stamps_error_id(tc)
-            tc.assumeTrue(hasErrorId('sp_which', 'StaMPS:sp_which:invalidArgument'), ...
-                'sp_which does not yet raise StaMPS:sp_which:invalidArgument');
-            tc.verifyError(@() sp_which(''), 'StaMPS:sp_which:invalidArgument');
+        % sp_which returns '' on not-found (contract: no throw). The hard-
+        % error variant is sp_which_required, which raises
+        % StaMPS:sp_which:notFound. Verify both halves of the contract.
+        function test_sp_which_missing_returns_empty(tc)
+            tc.verifyEqual(sp_which('this-binary-does-not-exist-zzz'), '');
+        end
+
+        function test_sp_which_required_missing_throws_not_found(tc)
+            tc.verifyError(@() sp_which_required('this-binary-does-not-exist-zzz'), ...
+                           'StaMPS:sp_which:notFound');
         end
     end
 end
 
 function p = tempfile_dir()
     p = fullfile(tempdir, ['sp_which_test_' num2str(feature('getpid'))]);
-end
-
-function tf = hasErrorId(helperName, errId)
-%HASERRORID True iff HELPERNAME's source contains the given error id.
-    src = which(helperName);
-    if isempty(src); tf = false; return; end
-    tf = contains(fileread(src), errId);
 end

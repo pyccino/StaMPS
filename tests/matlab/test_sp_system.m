@@ -22,13 +22,11 @@ classdef test_sp_system < matlab.unittest.TestCase
             tc.verifyWarningFree(@() sp_system(''));
         end
 
-        % Forward-looking contract: if sp_system grows a non-zero-exit
-        % error-id (handled by the fix-sp-helpers worktree), verify the
-        % identifier is namespaced correctly. Skipped while the helper
-        % still returns status codes silently.
+        % sp_system raises StaMPS:sp_system:nonZeroExit when the caller
+        % does not capture STATUS (nargout == 0) and the command exits
+        % with a non-zero status. Capturing STATUS propagates the code
+        % silently, matching system() semantics.
         function nonzero_exit_raises_stamps_error_id(tc)
-            tc.assumeTrue(hasErrorId('sp_system', 'StaMPS:sp_system:nonZeroExit'), ...
-                'sp_system does not yet raise StaMPS:sp_system:nonZeroExit');
             if ispc
                 badCmd = 'cmd /c exit 7';
             else
@@ -37,11 +35,4 @@ classdef test_sp_system < matlab.unittest.TestCase
             tc.verifyError(@() sp_system(badCmd), 'StaMPS:sp_system:nonZeroExit');
         end
     end
-end
-
-function tf = hasErrorId(helperName, errId)
-%HASERRORID True iff HELPERNAME's source contains the given error id.
-    src = which(helperName);
-    if isempty(src); tf = false; return; end
-    tf = contains(fileread(src), errId);
 end
