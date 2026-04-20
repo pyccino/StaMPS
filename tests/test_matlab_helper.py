@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import subprocess
+import sys
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest.mock import MagicMock, patch
 
@@ -200,3 +201,50 @@ def test_run_batch_decodes_cp1252_windows_fallback(tmp_path: Path):
     # Must be decodable as UTF-8 and must contain the U+2019 glyph we
     # recovered from the cp1252 byte.
     assert "Bob\u2019s output" in written.decode("utf-8")
+
+
+def test_run_batch_env_cwd_timeout_are_keyword_only(tmp_path: Path):
+    """env/cwd/timeout must be keyword-only to avoid positional collisions
+    with future signature additions. Passing env positionally (5th arg, after
+    matlab_exe and fallback_r) must raise TypeError at call time, before any
+    subprocess is spawned."""
+    script = tmp_path / "s.m"
+    script.write_text("disp('hi')")
+    log = tmp_path / "s.log"
+    with patch("stamps._matlab.subprocess.run") as mock_run:
+        with pytest.raises(TypeError):
+            # Positional: (script, log, matlab_exe, fallback_r, env) — the 5th
+            # positional slot must no longer be reachable.
+            run_batch(script, log, None, False, {})  # type: ignore[misc]
+    assert mock_run.call_count == 0
+
+
+def test_run_batch_log_records_decode_strategy(tmp_path: Path):
+    """Log body must begin with a prelude recording the codec used to decode
+    MATLAB stdout. Clean UTF-8 input -> 'utf-8'. Invalid UTF-8 on POSIX ->
+    locale fallback codec; on Windows -> cp1252."""
+    import locale
+
+    script = tmp_path / "s.m"
+    script.write_text("disp('hi')")
+
+    # Case 1: clean UTF-8 input — prelude should say utf-8.
+    log1 = tmp_path / "s1.log"
+    mock_proc = MagicMock(returncode=0, stdout=b"hello world\n", stderr=b"")
+    with patch("stamps._matlab.subprocess.run", return_value=mock_proc):
+        run_batch(script, log1, matlab_exe=Path("/fake/matlab"))
+    body1 = log1.read_bytes().decode("utf-8")
+    assert body1.startswith("# stamps: decoded via utf-8\n"), body1[:80]
+    assert "hello world" in body1
+
+    # Case 2: invalid UTF-8 bytes — prelude should name the fallback codec.
+    log2 = tmp_path / "s2.log"
+    mock_proc2 = MagicMock(returncode=0, stdout=b"Bob\x92s output\r\n", stderr=b"")
+    with patch("stamps._matlab.subprocess.run", return_value=mock_proc2):
+        run_batch(script, log2, matlab_exe=Path("/fake/matlab"))
+    body2 = log2.read_bytes().decode("utf-8")
+    if sys.platform == "win32":
+        expected_fallback = "cp1252"
+    else:
+        expected_fallback = locale.getpreferredencoding(False)
+    assert body2.startswith(f"# stamps: decoded via {expected_fallback}\n"), body2[:80]
