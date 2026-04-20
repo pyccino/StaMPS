@@ -10,7 +10,17 @@ from pathlib import Path
 
 import pytest
 
-STAMPS = Path(os.environ["STAMPS"])
+# Acceptance tests run against an installed/built StaMPS tree pointed to by
+# $STAMPS. On CI and dev machines where the env var is unset, every test in
+# this module skips cleanly rather than erroring at collection time.
+_stamps_env = os.environ.get("STAMPS")
+if _stamps_env:
+    STAMPS = Path(_stamps_env)
+else:
+    STAMPS = Path(__file__).resolve().parent.parent  # fallback to repo root
+    pytestmark = pytest.mark.skip(
+        reason="$STAMPS env var not set; acceptance tests run only against an installed tree"
+    )
 
 
 @pytest.mark.windows_only
