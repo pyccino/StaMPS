@@ -143,8 +143,11 @@ $proxyArgs["MaximumRedirection"] = 2
 try {
     $release = Invoke-RestMethod -Uri $apiUrl -Headers $headers @proxyArgs
 } catch {
-    Write-Error "Failed to fetch release. Common causes: TLS issue, proxy, offline, no tag yet."
-    Write-Error "Error: $_"
+    # $ErrorActionPreference = "Stop" turns Write-Error into a terminating
+    # error whose exit code is 1, clobbering the intended `exit 3` below.
+    # Write directly to stderr so the exit code we choose is preserved.
+    [Console]::Error.WriteLine("ERROR: Failed to fetch release. Common causes: TLS issue, proxy, offline, no tag yet.")
+    [Console]::Error.WriteLine("ERROR: $_")
     if (-not $release) {
         Write-Host ""
         Write-Host "No release available yet. Build from source:"
@@ -156,7 +159,10 @@ try {
 }
 
 $asset = $release.assets | Where-Object { $_.name -eq "stamps-windows-x64-msvc.zip" } | Select-Object -First 1
-if (-not $asset) { Write-Error "Release $($release.tag_name) does not contain stamps-windows-x64-msvc.zip"; exit 3 }
+if (-not $asset) {
+    [Console]::Error.WriteLine("ERROR: Release $($release.tag_name) does not contain stamps-windows-x64-msvc.zip")
+    exit 3
+}
 $sums = $release.assets | Where-Object { $_.name -eq "SHA256SUMS-msvc" } | Select-Object -First 1
 
 # --- Integrity-proof precondition ---
@@ -168,7 +174,7 @@ if (-not $sums) {
     if ($IAcceptUnverifiedRisk) {
         Write-Warning "Release asset SHA256SUMS-msvc missing but -IAcceptUnverifiedRisk was passed. Proceeding WITHOUT integrity proof."
     } else {
-        Write-Error "Release asset SHA256SUMS-msvc missing; refusing to install without integrity proof"
+        [Console]::Error.WriteLine("ERROR: Release asset SHA256SUMS-msvc missing; refusing to install without integrity proof")
         exit 3
     }
 }
@@ -189,7 +195,7 @@ try {
         $expected = (Invoke-RestMethod -Uri $sums.browser_download_url @proxyArgs) -split ' ' | Select-Object -First 1
         $actual = (Get-FileHash -Algorithm SHA256 "$zipPath").Hash.ToLower()
         if ($actual -ne $expected.ToLower()) {
-            Write-Error "SHA256 mismatch: expected $expected, got $actual. Aborting."
+            [Console]::Error.WriteLine("ERROR: SHA256 mismatch: expected $expected, got $actual. Aborting.")
             exit 4
         }
         Write-Host "SHA256 verified: $actual"
@@ -232,12 +238,12 @@ try {
                 if ($IAcceptUnverifiedRisk) {
                     Write-Warning "Attestation verification failed 3x but -IAcceptUnverifiedRisk was passed. Proceeding at your risk."
                 } else {
-                    Write-Error @"
-Sigstore attestation verification failed 3 times.
+                    [Console]::Error.WriteLine(@"
+ERROR: Sigstore attestation verification failed 3 times.
 The artifact may be tampered with, OR github attestations API may be
 transiently down. To proceed at your own risk (e.g., on an offline
 install), re-run with -IAcceptUnverifiedRisk.
-"@
+"@)
                     exit 5
                 }
             } else {
