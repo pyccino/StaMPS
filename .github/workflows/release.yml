@@ -77,6 +77,27 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with: { name: mingw-sums, path: 'SHA*SUMS-mingw' }
 
+  build-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with: { python-version: "3.11" }
+      - name: Install build tooling
+        run: pip install build==1.2.2
+      - name: Build sdist + wheel
+        run: python -m build --sdist --wheel --outdir dist/
+      - name: SHA256
+        run: |
+          sha256sum dist/*.whl dist/*.tar.gz > SHA256SUMS-wheel
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: wheel-dist
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            SHA256SUMS-wheel
+
   generate-sbom:
     needs: [build-msvc, build-mingw]
     if: always() && needs.build-msvc.result == 'success'
@@ -149,6 +170,9 @@ jobs:
             artifacts/sbom.cdx.json
             stamps-src.tar.gz
             SHA256SUMS-src
+            artifacts/stamps_windows-*.whl
+            artifacts/stamps-windows-*.tar.gz
+            artifacts/SHA256SUMS-wheel
           # Attestation bundles are NOT release assets; they live in
           # GitHub's attestations API. Verify with: gh attestation verify
           # --owner <owner> stamps-windows-x64-msvc.zip
