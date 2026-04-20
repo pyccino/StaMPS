@@ -88,7 +88,7 @@ bperp=bperp(ifgday_ix(:,2))-bperp(ifgday_ix(:,1));
 if ~exist(headingname,'file')
     headingname= ['../',headingname];
 end
-heading=load(headingname);
+heading=sp_read_numeric(headingname);
 if isempty(heading)
     error('heading.1.in is empty')
 end
@@ -97,7 +97,7 @@ setparm('heading',heading,1);
 if ~exist(lambdaname,'file')
     lambdaname= ['../',lambdaname];
 end
-lambda=load(lambdaname);
+lambda=sp_read_numeric(lambdaname);
 setparm('lambda',lambda,1);
 
 

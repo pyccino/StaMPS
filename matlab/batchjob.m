@@ -31,7 +31,13 @@ parmarray;
 
 
 % getting which machine is being ran
-[a,b] = system('hostname >temp');
+if ispc
+    fid = fopen('temp', 'w');
+    fprintf(fid, '%s\n', getenv('COMPUTERNAME'));
+    fclose(fid);
+else
+    sp_system('hostname >temp');
+end
 text = fileread('temp');
 fprintf(['Running on : ' text '\n'])
 

@@ -20,12 +20,10 @@ if ~exist(merged_wd)
     mkdir(merged_wd)
 end
 if ~exist([merged_wd,'/patch_noover.in']) & exist([sb_wd,'/patch_noover.in'])
-    aa=['!cp ',sb_wd,'/patch_noover.in ',merged_wd]; 
-    eval(aa)
+    copyfile([sb_wd,'/patch_noover.in'], merged_wd);
 end
 if ~exist([merged_wd1,'/parms.mat'])
-    aa=['!cp ',sb_wd1,'/parms.mat ',merged_wd1,'/parms.mat']; 
-    eval(aa)
+    copyfile([sb_wd1,'/parms.mat'], [merged_wd1,'/parms.mat']);
 end
 
 psver=2;

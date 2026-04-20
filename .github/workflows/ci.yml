@@ -153,3 +153,31 @@ jobs:
         run: cmake -S src -B build -G "Visual Studio 18 2026" -A x64
       - name: Build
         run: cmake --build build --config Release
+
+  matlab-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        matlab-release: [R2023a, R2024a]
+    continue-on-error: true  # skip-on-fork safe
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - id: lic
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.MLM_LICENSE_FILE_CONTENTS }}" ]; then
+            echo "has_license=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_license=true" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.lic.outputs.has_license == 'true'
+        uses: matlab-actions/setup-matlab@a0180c939fb1a28de13f44f7b778b912384ced1f  # v3.0.1
+        with:
+          release: ${{ matrix.matlab-release }}
+      - if: steps.lic.outputs.has_license == 'true'
+        uses: matlab-actions/run-command@00a6560bdaa6b55c93fff755fb869911be1a9aab  # v3.0.1
+        with:
+          command: "addpath('matlab_compat'); runtests('tests/matlab','IncludeSubfolders',true)"
+      - if: steps.lic.outputs.has_license == 'false'
+        run: echo "::warning::Skipping MATLAB tests — no license secret configured"
