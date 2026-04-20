@@ -35,6 +35,8 @@ using namespace std;
 #include <complex>
 using namespace std;
 
+#include <cstdint>
+
 #include "stamps_locale.h"
 
 // =======================================================================
@@ -178,8 +180,8 @@ try {
     int i=0;
     double sumamp=0;
     double amp_pixel=0;
-    long unsigned int nof_pixels=0;
-    long unsigned int nof_zero_pixels=0;
+    uint32_t nof_pixels=0;
+    uint32_t nof_zero_pixels=0;
     ampfile.read (reinterpret_cast<char*>(buffer), linebytes);
     while (! ampfile.eof() ) // loop to read all file using buffers
     {
@@ -251,7 +253,10 @@ try {
 
   }
   catch( ... ) {
-    return(999);
+    // [port] rc=1, not 999. POSIX exit codes are 8-bit and 999 & 0xFF = 231
+    // collides with the signal-kill range (128+signum) the test harness uses
+    // to detect SIGSEGV/SIGABRT. A plain 1 signals failure unambiguously.
+    return 1;
   }
 
   return(0);

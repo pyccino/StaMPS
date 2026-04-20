@@ -266,9 +266,9 @@ try {
     }
 
     char header[32];
-    long magic=0x59a66a95;
+    int32_t magic=0x59a66a95;
     ampfile[i].read(header,32);
-    if (*reinterpret_cast<long*>(header) == magic)
+    if (*reinterpret_cast<int32_t*>(header) == magic)
         cout << "sun raster file - skipping header\n";
     else ampfile[i].seekg(ios::beg);
   }
@@ -310,7 +310,8 @@ try {
   const int patch_amp_linebytes =  patch_width*sizeofelement;
 
   filebuf *pbuf;
-  long size;
+  std::streamoff size;   // [LLP64] pubseekoff returns streamoff; `long` is
+                         // 32-bit on Win64 and truncates SLCs >= 2 GiB.
   long numlines;
 
   // get pointer to associated buffer object
@@ -319,7 +320,9 @@ try {
   // get file size using buffer's members
   size=pbuf->pubseekoff (0,ios::end,ios::in);
   pbuf->pubseekpos (0,ios::in);
-  numlines=size/width/sizeofelement/2;
+  // sizeofelement is int, so the whole chain stays signed streamoff; narrow
+  // once at the final assignment.
+  numlines = static_cast<long>(size / width / sizeofelement / 2);
 
   cout << "number of lines per file = " << numlines << "\n";
 
@@ -570,10 +573,11 @@ try {
   }
   catch( const char * str ) {
      cout << str << "\n";
-     return(999);
+     // [port] rc=1, not 999: see calamp.cpp catch-block comment.
+     return 1;
   }
   catch( ... ) {
-    return(999);
+    return 1;
   }
 
   return(0);
