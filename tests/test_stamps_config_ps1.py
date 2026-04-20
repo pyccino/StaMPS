@@ -66,24 +66,36 @@ def test_ps1_sets_all_vars():
 @pytest.mark.windows_only
 @pytest.mark.skipif(sys.platform != "win32", reason="PowerShell config is Windows-only")
 def test_ps1_path_idempotent():
-    """Dot-sourcing twice must not duplicate PATH entries."""
+    """Dot-sourcing twice must not duplicate PATH entries.
+
+    Resolve the STAMPS\\bin segment from the script itself, then split
+    the resulting PATH on `;` and assert that exact segment (case-
+    insensitive, since Windows PATH is case-insensitive) appears
+    exactly once.
+    """
     cmd = [
         "powershell",
         "-NoProfile",
         "-Command",
-        f". '{SCRIPT}'; . '{SCRIPT}'; $env:PATH",
+        f". '{SCRIPT}'; . '{SCRIPT}'; "
+        'Write-Output "---STAMPS_BIN---"; Write-Output "$env:STAMPS\\bin"; '
+        'Write-Output "---PATH---"; Write-Output $env:PATH',
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    path_entries = [p for p in proc.stdout.strip().split(";") if p]
-    # Every StaMPS-injected entry must appear exactly once.
-    stamps_bin_count = sum(1 for p in path_entries if p.lower().endswith(r"\stamps\bin"))
-    # Be tolerant: `STAMPS` root may live under any directory but the
-    # bin suffix is unique to the port.
-    matches = [p for p in path_entries if p.lower().endswith(r"\bin")]
-    stamps_bin_matches = [p for p in matches if "stamps" in p.lower()]
-    assert stamps_bin_count <= 1 or len(stamps_bin_matches) == len(
-        set(stamps_bin_matches)
-    ), f"PATH contains duplicate StaMPS\\bin entries: {stamps_bin_matches}"
+    lines = proc.stdout.splitlines()
+    stamps_bin_idx = lines.index("---STAMPS_BIN---")
+    path_idx = lines.index("---PATH---")
+    stamps_bin = lines[stamps_bin_idx + 1].strip()
+    path_line = lines[path_idx + 1].strip()
+
+    path_entries = [p for p in path_line.split(";") if p]
+    # Exact segment match, case-insensitive (Windows PATH is CI).
+    target = stamps_bin.lower()
+    stamps_bin_count = sum(1 for p in path_entries if p.lower() == target)
+    assert stamps_bin_count == 1, (
+        f"Expected exactly one PATH entry matching {stamps_bin!r}, "
+        f"found {stamps_bin_count}. PATH entries: {path_entries}"
+    )
 
 
 @pytest.mark.windows_only
