@@ -64,7 +64,7 @@ if use_triangle=='y'
     fprintf(fid,'%d %f %f\n',ps.xy');
     fclose(fid);
 
-    system('triangle -e scla.1.node > triangle_scla.log');
+    sp_system('triangle -e scla.1.node > triangle_scla.log');
 
     fid=fopen('scla.2.edge','r');
     header=str2num(fgetl(fid));

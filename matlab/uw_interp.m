@@ -37,7 +37,7 @@ if use_triangle=='y'
     fprintf(fid,'%d %d %d\n',xy');
     fclose(fid);
 
-    [a,b] = system('triangle -e unwrap.1.node > triangle.log');
+    [a,b] = sp_system('triangle -e unwrap.1.node > triangle.log');
 
     fid=fopen('unwrap.2.edge','r');
     header=str2num(fgetl(fid));
