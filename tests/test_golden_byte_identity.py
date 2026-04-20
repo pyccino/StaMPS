@@ -8,6 +8,7 @@ ulp-tolerant is covered by AC4.
 
 Task 2c.3 in the port plan.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -25,8 +26,7 @@ def test_python_mt_prep_snap_matches_csh_golden(stamps_root: Path, tmp_path: Pat
     golden = stamps_root / "tests/golden/linux_csh/ps_single"
     if not golden.exists():
         pytest.skip(
-            f"golden tree not yet captured ({golden} missing). "
-            "Run: bash tests/golden/capture.sh"
+            f"golden tree not yet captured ({golden} missing). Run: bash tests/golden/capture.sh"
         )
     fixture = stamps_root / "tests/fixtures/synthetic_ps"
     if not (fixture / "rslc/20200101.rslc").exists():
@@ -39,13 +39,21 @@ def test_python_mt_prep_snap_matches_csh_golden(stamps_root: Path, tmp_path: Pat
         if cmake is None:
             pytest.skip("cmake not on PATH — cannot build C++ binaries")
         subprocess.run(
-            [cmake, "-S", str(stamps_root / "src"), "-B", str(stamps_root / "build"),
-             "-DCMAKE_BUILD_TYPE=Release"],
-            check=True, capture_output=True,
+            [
+                cmake,
+                "-S",
+                str(stamps_root / "src"),
+                "-B",
+                str(stamps_root / "build"),
+                "-DCMAKE_BUILD_TYPE=Release",
+            ],
+            check=True,
+            capture_output=True,
         )
         subprocess.run(
             [cmake, "--build", str(stamps_root / "build"), "--parallel"],
-            check=True, capture_output=True,
+            check=True,
+            capture_output=True,
         )
 
     # Match the canonical fixture path capture.sh uses, so .in files
@@ -72,9 +80,22 @@ def test_python_mt_prep_snap_matches_csh_golden(stamps_root: Path, tmp_path: Pat
     env["PATH"] = f"{workdir}{os.pathsep}{env['PATH']}"
 
     result = subprocess.run(
-        [sys.executable, "-m", "stamps.mt_prep_snap", "20200101", str(canonical),
-         "0.4", "1", "1", "50", "50"],
-        cwd=workdir, env=env, capture_output=True, timeout=180,
+        [
+            sys.executable,
+            "-m",
+            "stamps.mt_prep_snap",
+            "20200101",
+            str(canonical),
+            "0.4",
+            "1",
+            "1",
+            "50",
+            "50",
+        ],
+        cwd=workdir,
+        env=env,
+        capture_output=True,
+        timeout=180,
     )
     assert result.returncode == 0, (
         f"mt_prep_snap failed:\nstdout:\n{result.stdout.decode(errors='replace')}\n"
@@ -96,7 +117,12 @@ def test_python_mt_prep_snap_matches_csh_golden(stamps_root: Path, tmp_path: Pat
         if not actual.exists():
             missing.append(str(rel))
             continue
-        if hashlib.sha256(src.read_bytes()).hexdigest() != hashlib.sha256(actual.read_bytes()).hexdigest():
+        if (
+            hashlib.sha256(src.read_bytes()).hexdigest()
+            != hashlib.sha256(actual.read_bytes()).hexdigest()
+        ):
             mismatches.append(str(rel))
     assert not missing, f"Python port missing artifacts present in golden: {missing}"
-    assert not mismatches, f"Python port output diverged byte-for-byte from csh golden: {mismatches}"
+    assert not mismatches, (
+        f"Python port output diverged byte-for-byte from csh golden: {mismatches}"
+    )
