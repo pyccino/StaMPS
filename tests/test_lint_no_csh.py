@@ -12,6 +12,10 @@ FORBIDDEN_IN_MATLAB = [
     (re.compile(r"system\('cp\s"), "use copyfile() instead of system('cp ...')"),
     (re.compile(r"!sync"), "use sp_sync() instead of !sync"),
     (re.compile(r">\s*/dev/null"), "use sp_system() which rewrites /dev/null"),
+    (
+        re.compile(r"(?<![\w])system\(\s*['\"]\s*triangle\b"),
+        "use sp_system('triangle ...') for cmd.exe-safe quoting",
+    ),
 ]
 
 
@@ -84,6 +88,9 @@ def test_no_csh_shebang_in_snap_path_bin(stamps_root: Path):
         ("system('cp src dst');", "copyfile()"),
         ("!sync", "sp_sync()"),
         ("system('echo > /dev/null');", "sp_system"),
+        ("[a,b] = system('triangle -e foo.1.node > tri.log');", "sp_system('triangle"),
+        ("system( 'triangle -e foo.1.node');", "sp_system('triangle"),
+        ('system("triangle -e foo.1.node");', "sp_system('triangle"),
     ],
 )
 def test_lint_detects_forbidden_pattern(
@@ -114,6 +121,7 @@ def test_lint_does_not_flag_clean_matlab(tmp_path: Path):
         "  copyfile(src, dst);\n"
         "  sp_sync();\n"
         "  sp_system('echo hello');\n"
+        "  sp_system('triangle -e foo.1.node > tri.log');\n"
         "end\n",
         encoding="utf-8",
     )
