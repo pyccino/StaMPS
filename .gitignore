@@ -10,6 +10,28 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+# C++ object files + in-tree binaries produced by legacy `make` (src/Makefile)
+src/*.o
+src/calamp
+src/cpxsum
+src/pscphase
+src/pscdem
+src/psclonlat
+src/selpsc_patch
+src/selsbc_patch
+src/dismph
+# Same binaries sometimes installed in-place by the old Makefile's
+# `make install` target (copies src/* into bin/*). Tracked shims in bin/
+# (mt_prep_snap, mt_extract_cands, their .bat counterparts, legacy-csh/)
+# are committed via explicit allow-list below.
+bin/calamp
+bin/cpxsum
+bin/pscphase
+bin/pscdem
+bin/psclonlat
+bin/selpsc_patch
+bin/selsbc_patch
+bin/dismph
 
 # Editor
 .vscode/

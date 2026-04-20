@@ -57,12 +57,17 @@ def _gen_mask(width, length):
     return bytes(buf)
 
 def _write_par(path, length, width):
-    path.write_text(PAR_TEMPLATE.format(length=length, width=width))
+    # write_bytes bypasses platform newline translation — Windows write_text
+    # would emit CRLF and break the SHA256 manifest. Writing raw LF keeps the
+    # fixture byte-identical across Linux/macOS/Windows.
+    path.write_bytes(
+        PAR_TEMPLATE.format(length=length, width=width).encode("ascii"))
 
 def _write_baseline(path):
-    path.write_text("BPERP:      50.0\nBTEMP:      12.0\n"
-                    "HORIZONTAL: 10.0\nVERTICAL:   -5.0\n"
-                    "PRECISION:  0.1\nREFERENCE:  0\n")
+    path.write_bytes(
+        b"BPERP:      50.0\nBTEMP:      12.0\n"
+        b"HORIZONTAL: 10.0\nVERTICAL:   -5.0\n"
+        b"PRECISION:  0.1\nREFERENCE:  0\n")
 
 def generate_ps_fixture(dest: Path):
     dest.mkdir(parents=True, exist_ok=True)

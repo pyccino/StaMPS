@@ -3,8 +3,11 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff
-        args: [--fix]
+        # Skip legacy upstream Python 2 scripts under bin/ (tsx_dump_heading,
+        # etc.) that pre-date the Windows port and aren't in scope for lint.
+        args: [--fix, "--extend-exclude=bin/"]
       - id: ruff-format
+        args: ["--extend-exclude=bin/"]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
