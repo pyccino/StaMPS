@@ -138,7 +138,12 @@ def test_long_path_prefix_windows(monkeypatch):
         p = Path("/") / ("a" * 260)
     got = long_path(p)
     if os.name == "nt":
-        assert str(got).startswith("\\\\?\\")
+        # Accept either \\?\ or //?/ — MinGW WindowsPath normalizes to
+        # forward slashes when stringified; native Windows uses backslashes.
+        s = str(got)
+        assert s.startswith("\\\\?\\") or s.startswith("//?/"), (
+            f"Expected \\\\?\\ or //?/ prefix, got: {s!r}"
+        )
     else:
         assert got == p
 
