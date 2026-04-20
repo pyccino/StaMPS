@@ -1,4 +1,4 @@
-# Dot-source to configure the StaMPS environment in PowerShell:
+﻿# Dot-source to configure the StaMPS environment in PowerShell:
 #   . C:\path\to\StaMPS\StaMPS_CONFIG.ps1
 # For programmatic invocation (PHASE, CI), use bin\mt_prep_snap.bat which
 # self-bootstraps the environment from %~dp0.

@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 
 # StaMPS Windows Installer — downloads + verifies + unpacks the release zip,
 # builds Triangle from vendored source, probes system readiness.

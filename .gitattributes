@@ -13,5 +13,26 @@ tests/golden/** binary
 *.cmd text eol=crlf
 *.cpp text eol=lf
 *.h   text eol=lf
+*.c   text eol=lf
 *.m   text eol=lf
 CMakeLists.txt text eol=lf
+*.cmake text eol=lf
+Makefile text eol=lf
+makefile text eol=lf
+
+# Documentation and config
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+
+# External C sources (vendored: Triangle, etc.)
+external/triangle/src/*.c text eol=lf
+external/triangle/src/*.h text eol=lf
+
+# LaTeX documentation
+*.tex text eol=lf
+*.bib text eol=lf
+*.bst text eol=lf
