@@ -153,6 +153,21 @@ def test_bat_passes_utf8_args(stamps_root: Path, tmp_path: Path):
     env["APPDATA"] = str(appdata)
     proc = subprocess.run(
         [str(shim), "20200101", non_ascii],
+        capture_output=True,
+        timeout=30,
+        env=env,
+    )
+    # Stub forces exit 42 on the -m branch. 9009/9 means resolver failed.
+    assert proc.returncode == 42, (
+        f"stub never ran -m branch: rc={proc.returncode}, "
+        f"stdout={proc.stdout!r}, stderr={proc.stderr!r}"
+    )
+    # Byte-exact: stderr must contain UTF-8 bytes of the input argv.
+    # Any cmd.exe mojibake (e.g. é -> 0x82 on CP437) fails this.
+    assert (
+        proc.stderr == expected
+    ), f"argv byte mismatch: expected {expected!r}, got {proc.stderr!r}"
+
 
 def test_bat_propagates_nonzero_exit_code(stamps_root: Path, tmp_path: Path):
     """Regression for commit 2683fe1: ``%ERRORLEVEL%`` inside an ``if (...)``
@@ -196,18 +211,6 @@ def test_bat_propagates_nonzero_exit_code(stamps_root: Path, tmp_path: Path):
         timeout=30,
         env=env,
     )
-    # Stub forces exit 42 on the -m branch. 9009/9 means resolver failed.
-    assert proc.returncode == 42, (
-        f"stub never ran -m branch: rc={proc.returncode}, "
-        f"stdout={proc.stdout!r}, stderr={proc.stderr!r}"
-    )
-    # Byte-exact: stderr must contain UTF-8 bytes of the input argv.
-    # The stub writes ONLY argv[1]'s UTF-8 encoding, no newline, no
-    # framing. Any cmd.exe mojibake (e.g. é -> 0x82 on CP437) fails.
-    assert (
-        proc.stderr == expected
-    ), f"argv byte mismatch: expected {expected!r}, got {proc.stderr!r}"
-
     # If the shim regresses to parse-time %ERRORLEVEL%, we'd see 0. If it
     # somehow bypasses STAMPS_PYTHON and falls back to `py`/`python` on
     # PATH, we'd see 4 (usage). Require exactly 42 — the stub's exit code.
