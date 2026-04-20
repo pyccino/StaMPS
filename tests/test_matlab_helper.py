@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
+import subprocess
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest.mock import MagicMock, patch
 
 import pytest
+import stamps._matlab as matlab_mod
 from stamps._matlab import (
     MatlabNotFoundError,
     build_cmd,
@@ -118,3 +121,82 @@ def test_run_batch_exit_code_propagates(tmp_path: Path):
     with patch("subprocess.run", return_value=mock_proc):
         rc = run_batch(script, log, matlab_exe=Path("/fake/matlab"))
     assert rc == 3
+
+
+def test_run_batch_propagates_env(tmp_path: Path):
+    """Caller-supplied env dict must reach subprocess.run verbatim."""
+    script = tmp_path / "s.m"
+    script.write_text("disp('hi')")
+    log = tmp_path / "s.log"
+    mock_proc = MagicMock(returncode=0, stdout=b"hi\n", stderr=b"")
+    fake_env = {"STAMPS": "/fake", "MATLABPATH": "/fake/matlab"}
+    with patch("stamps._matlab.subprocess.run", return_value=mock_proc) as mock_run:
+        run_batch(script, log, matlab_exe=Path("/fake/matlab"), env=fake_env)
+    assert mock_run.call_count == 1
+    kwargs = mock_run.call_args.kwargs
+    assert kwargs["env"] == fake_env
+    assert kwargs["env"]["STAMPS"] == "/fake"
+
+
+def test_run_batch_propagates_cwd(tmp_path: Path):
+    """Caller-supplied cwd must reach subprocess.run verbatim."""
+    script = tmp_path / "s.m"
+    script.write_text("disp('hi')")
+    log = tmp_path / "s.log"
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    mock_proc = MagicMock(returncode=0, stdout=b"", stderr=b"")
+    with patch("stamps._matlab.subprocess.run", return_value=mock_proc) as mock_run:
+        run_batch(script, log, matlab_exe=Path("/fake/matlab"), cwd=workdir)
+    assert mock_run.call_args.kwargs["cwd"] == workdir
+
+
+def test_run_batch_respects_timeout(tmp_path: Path):
+    """subprocess.TimeoutExpired must propagate out of run_batch unchanged."""
+    script = tmp_path / "s.m"
+    script.write_text("while true; end")
+    log = tmp_path / "s.log"
+    err = subprocess.TimeoutExpired(cmd=["matlab"], timeout=0.1)
+    with patch("stamps._matlab.subprocess.run", side_effect=err):
+        with pytest.raises(subprocess.TimeoutExpired):
+            run_batch(script, log, matlab_exe=Path("/fake/matlab"), timeout=0.1)
+
+
+def test_run_batch_skips_when_stamps_skip_matlab_set(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    """Setting STAMPS_SKIP_MATLAB=1 and reimporting makes run_batch raise
+    RuntimeError before any subprocess call is made."""
+    monkeypatch.setenv("STAMPS_SKIP_MATLAB", "1")
+    reloaded = importlib.reload(matlab_mod)
+    script = tmp_path / "s.m"
+    script.write_text("disp('hi')")
+    log = tmp_path / "s.log"
+    with patch("stamps._matlab.subprocess.run") as mock_run:
+        with pytest.raises(RuntimeError, match="STAMPS_SKIP_MATLAB"):
+            reloaded.run_batch(script, log, matlab_exe=Path("/fake/matlab"))
+    assert mock_run.call_count == 0
+    # Reset module state so other tests aren't poisoned by the skip flag.
+    monkeypatch.delenv("STAMPS_SKIP_MATLAB", raising=False)
+    importlib.reload(matlab_mod)
+
+
+@pytest.mark.windows_only
+def test_run_batch_decodes_cp1252_windows_fallback(tmp_path: Path):
+    """Bytes that fail UTF-8 decode should be decoded via cp1252 on Windows
+    and the log file must end up as valid UTF-8 containing the decoded form."""
+    script = tmp_path / "s.m"
+    script.write_text("disp('x')")
+    log = tmp_path / "s.log"
+    # 0x92 is a cp1252 right single-quote (U+2019). It is an invalid UTF-8
+    # continuation byte, so strict UTF-8 decode must fail and the cp1252
+    # fallback must take over.
+    raw = b"Bob\x92s output\r\n"
+    mock_proc = MagicMock(returncode=0, stdout=raw, stderr=b"")
+    with patch("stamps._matlab.subprocess.run", return_value=mock_proc):
+        rc = run_batch(script, log, matlab_exe=Path("C:/fake/matlab.exe"))
+    assert rc == 0
+    written = log.read_bytes()
+    # Must be decodable as UTF-8 and must contain the U+2019 glyph we
+    # recovered from the cp1252 byte.
+    assert "Bob\u2019s output" in written.decode("utf-8")
