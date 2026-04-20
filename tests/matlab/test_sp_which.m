@@ -70,7 +70,6 @@ classdef test_sp_which < matlab.unittest.TestCase
         function test_does_not_invoke_subprocess(tc)
             % sp_which must not shell out (would be slow on Windows + recursive).
             % Spy by overriding system() locally; if invoked, set a flag.
-            spy = onCleanup(@() rmpath(tempdir));
             spyDir = tempfile_dir();
             mkdir(spyDir);
             spyFile = fullfile(spyDir, 'system.m');
@@ -80,12 +79,29 @@ classdef test_sp_which < matlab.unittest.TestCase
             fprintf(fid, 'end\n');
             fclose(fid);
             addpath(spyDir);
-            cleanupSpy = onCleanup(@() (rmpath(spyDir), rmdir(spyDir, 's')));
+            tc.addTeardown(@() rmpath(spyDir));
+            tc.addTeardown(@() rmdir(spyDir, 's'));
             tc.verifyWarningFree(@() sp_which('matlab'));
+        end
+
+        % Forward-looking contract: if sp_which grows an error-id for
+        % empty / whitespace input (handled by the fix-sp-helpers
+        % worktree), verify the identifier is namespaced correctly.
+        function empty_argument_raises_stamps_error_id(tc)
+            tc.assumeTrue(hasErrorId('sp_which', 'StaMPS:sp_which:invalidArgument'), ...
+                'sp_which does not yet raise StaMPS:sp_which:invalidArgument');
+            tc.verifyError(@() sp_which(''), 'StaMPS:sp_which:invalidArgument');
         end
     end
 end
 
 function p = tempfile_dir()
     p = fullfile(tempdir, ['sp_which_test_' num2str(feature('getpid'))]);
+end
+
+function tf = hasErrorId(helperName, errId)
+%HASERRORID True iff HELPERNAME's source contains the given error id.
+    src = which(helperName);
+    if isempty(src); tf = false; return; end
+    tf = contains(fileread(src), errId);
 end

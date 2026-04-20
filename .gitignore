@@ -48,6 +48,11 @@ Thumbs.db
 tests/fixtures/synthetic_ps/
 tests/fixtures/synthetic_sb/
 
+# MATLAB test fixture: ~3 MB, produced by
+# tests/matlab/fixtures/generate_ps_weed_large.m. The generator is
+# committed; its deterministic output is not.
+tests/matlab/fixtures/ps_weed_large.mat
+
 # Third-party components installed via ExternalProject_Add. The CMakeLists.txt
 # + LICENSE + patches in external/<name>/ are tracked; the fetched source
 # tree, build outputs, and installed binaries are not.
