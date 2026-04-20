@@ -1,0 +1,39 @@
+Triangle
+A Two-Dimensional Quality Mesh Generator and Delaunay Triangulator.
+Version 1.6
+
+Show Me
+A Display Program for Meshes and More.
+Version 1.6
+
+Copyright 1993, 1995, 1997, 1998, 2002, 2005 Jonathan Richard Shewchuk
+2360 Woolsey #H
+Berkeley, California  94705-1927
+Please send bugs and comments to jrs@cs.berkeley.edu
+
+Created as part of the Quake project (tools for earthquake simulation).
+Supported in part by NSF Grant CMS-9318163 and an NSERC 1967 Scholarship.
+There is no warranty whatsoever.  Use at your own risk.
+
+------------------------------------------------------------------------------
+
+These programs may be freely redistributed under the condition that the
+copyright notices (including the copy of this notice in the code comments
+and the copyright notice printed when the `-h' switch is selected) are
+not removed, and no compensation is received.  Private, research, and
+institutional use is free.  You may distribute modified versions of this
+code UNDER THE CONDITION THAT THIS CODE AND ANY MODIFICATIONS MADE TO IT
+IN THE SAME FILE REMAIN UNDER COPYRIGHT OF THE ORIGINAL AUTHOR, BOTH
+SOURCE AND OBJECT CODE ARE MADE FREELY AVAILABLE WITHOUT CHARGE, AND
+CLEAR NOTICE IS GIVEN OF THE MODIFICATIONS.  Distribution of this code as
+part of a commercial system is permissible ONLY BY DIRECT ARRANGEMENT
+WITH THE AUTHOR.  (If you are not directly supplying this code to a
+customer, and you are instead telling them how they can obtain it for
+free, then you are not required to make any arrangement with me.)
+
+------------------------------------------------------------------------------
+
+This program is distributed in the hope that it will be useful, but NEITHER
+with an implicit nor explicit warranty. Triangle is freely available to
+researchers, but it may not be sold or included in commercial products
+without the consent of its author. Please see the README file for details.
