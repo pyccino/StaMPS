@@ -1,3 +1,5 @@
+[![CI](https://github.com/pyccino/StaMPS/actions/workflows/ci.yml/badge.svg?branch=windows-port/main)](https://github.com/pyccino/StaMPS/actions/workflows/ci.yml)
+
 # StaMPS - Stanford Method for Persistent Scatterers
 
 ## Description
@@ -5,6 +7,19 @@
 
 ## Installation
 See the **StaMPS** manual for installation details and dependencies.
+
+On Windows, follow the native install flow documented in
+[`INSTALL.md`](./INSTALL.md) (SNAP preprocessor path). The upcoming
+`v1.0.0` tag on the [pyccino/StaMPS](https://github.com/pyccino/StaMPS)
+fork marks the first release of the Windows port.
+
+## Required OS
+- Linux (any modern distribution) — full support for all preprocessor paths.
+- macOS — supported for ISCE/SNAP/DORIS+ROI_PAC paths.
+- Windows 10 21H2+ / Windows 11 (x64) — supported end-to-end for the
+  **SNAP** preprocessor path only. See [`INSTALL.md`](./INSTALL.md) for
+  the native Windows install flow. WSL users should follow the Linux
+  install flow inside the WSL distribution.
 
 ## Supported InSAR pre-processors:
 - ISCE

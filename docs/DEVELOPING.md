@@ -1,0 +1,99 @@
+# Developing the StaMPS Windows Port
+
+This guide is for contributors to the `phase-team/StaMPS-windows` fork.
+For users, see `INSTALL.md`.
+
+## Build from source — all 4 platforms
+
+### Linux (GCC 13 on Ubuntu 22.04+)
+
+    sudo apt install -y cmake tcsh gawk python3.11 python3-pip
+    cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
+    cmake --build build
+    cmake --install build
+    pip install -e .[test]
+    python -m pytest tests/ -v
+
+### macOS (Xcode Command-Line Tools, Homebrew)
+
+    brew install cmake
+    cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
+    cmake --build build
+    pip install -e .[test]
+    python -m pytest tests/ -v
+
+### Windows MSVC (Visual Studio 2022 Build Tools)
+
+    cmake -S src -B build -G "Visual Studio 17 2022" -A x64
+    cmake --build build --config Release
+    pip install -e .[test]
+    python -m pytest tests/ -v
+
+### Windows MinGW-w64 (MSYS2)
+
+    pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
+    cmake -S src -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake --build build
+
+## Running tests locally
+
+    python -m pytest tests/ -v                    # all Python tests
+    python -m pytest tests/ -v -m "not nightly"   # skip slow E2E
+    python -m pytest tests/ -v -m "linux_only"    # Linux-only subset
+    matlab -batch "addpath('matlab_compat'); runtests('tests/matlab')"
+
+## Adding a patched `.m` file
+
+1. Identify the Unix-ism (`system()`, `!cmd`, `>& /dev/null`, `\\ls`, etc.).
+2. Add the edit to the 15-row table in Plan §3.7-3.21 with line number + OLD/NEW.
+3. Write a concrete test method in `tests/matlab/test_matlab_patches.m` — no
+   `assumeTrue(false, 'Placeholder')` left behind.
+4. Run `matlab -batch "addpath('matlab_compat'); runtests('tests/matlab/test_matlab_patches.m')"`.
+5. Verify `tests/test_lint_no_csh.py` still passes.
+6. Open a PR.
+
+## Golden regeneration
+
+When `bin/mt_prep_snap` or `bin/mt_extract_cands` csh sources change intentionally:
+
+1. Run `bash tests/golden/capture.sh` on a Linux host with tcsh installed.
+2. Inspect the diff vs. prior golden: `git diff tests/golden/`.
+3. Open a PR titled `goldens: refresh for <reason>`.
+4. Two reviewers approve: one domain, one CI.
+
+## Running CI locally via `act`
+
+`act` runs GitHub Actions workflows locally in Docker. Useful for CI debugging.
+
+    # Linux job:
+    act -j build-linux
+    # Windows jobs: NOT SUPPORTED by act (Windows containers require paid Docker Desktop)
+
+⚠️ **Warning:** Never run `act` against a PR from an untrusted contributor.
+`act` executes workflow steps as your host user; a malicious workflow can
+exfiltrate your SSH keys, AWS creds, etc. Only run `act` on code you've
+read in full.
+
+## Pre-commit hooks
+
+Install pre-commit (see Task 4.12):
+
+    pip install pre-commit
+    pre-commit install
+
+Hooks enforce: ruff format, ruff check, mypy on `python/stamps/`, trailing
+whitespace, no CRLF in source files, no SHA256 placeholders in external/.
+
+## Release process
+
+1. All PRs merged to `windows-port/main`.
+2. CI green on all 5 jobs (incl. Italian-locale canary).
+3. Maintainer bumps `CHANGELOG.md` from `[Unreleased]` to `[X.Y.Z]`.
+4. Maintainer commits + signs tag: `git tag -s vX.Y.Z -m "Release vX.Y.Z"`.
+5. Push tag: `git push fork vX.Y.Z`. Release workflow auto-runs.
+6. Verify release assets on GitHub Releases page.
+7. Verify Sigstore attestation: `gh attestation verify <asset> --owner pyccino`.
+
+## Contacting maintainers
+
+See MAINTAINERS.md.

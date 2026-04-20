@@ -1,0 +1,179 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+# Prevent concurrent tag pushes from racing release creation
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Default minimum permissions; jobs elevate as needed
+permissions:
+  contents: read
+
+jobs:
+  build-msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with: { submodules: recursive }
+      - name: Configure
+        run: cmake -S src -B build -G "Visual Studio 17 2022" -A x64
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Build Triangle (vendored Shewchuk source, SHA-pinned)
+        run: |
+          cmake -S external/triangle -B build-triangle
+          cmake --build build-triangle --config Release
+          cmake --install build-triangle --prefix external/triangle
+      - name: Package
+        run: |
+          7z a stamps-windows-x64-msvc.zip ^
+             bin external docs\ROLLBACK.md LICENSE NOTICE MAINTAINERS.md ^
+             external\triangle\LICENSE.txt external\snaphu\LICENSE
+      - name: SHA256 + SHA512
+        run: |
+          certutil -hashfile stamps-windows-x64-msvc.zip SHA256 > SHA256SUMS-msvc
+          certutil -hashfile stamps-windows-x64-msvc.zip SHA512 > SHA512SUMS-msvc
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: { name: msvc-zip, path: 'stamps-windows-x64-msvc.zip' }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: { name: msvc-sums, path: 'SHA*SUMS-msvc' }
+
+  build-mingw:
+    runs-on: windows-latest
+    continue-on-error: true   # MinGW is secondary; don't block release on its failure
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with: { submodules: recursive }
+      - uses: msys2/setup-msys2@e9898307ac31d1a803454791be09ab9973336e1c  # v2.31.1
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
+      - name: Build StaMPS (MinGW)
+        shell: msys2 {0}
+        run: |
+          cmake -S src -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+      - name: Build Triangle (MinGW)
+        shell: msys2 {0}
+        run: |
+          cmake -S external/triangle -B build-triangle -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-triangle
+          cmake --install build-triangle --prefix external/triangle
+      - name: Package
+        shell: msys2 {0}
+        run: |
+          7z a stamps-windows-x64-mingw.zip \
+             bin external docs/ROLLBACK.md LICENSE NOTICE MAINTAINERS.md \
+             external/triangle/LICENSE.txt external/snaphu/LICENSE
+          sha256sum stamps-windows-x64-mingw.zip > SHA256SUMS-mingw
+          sha512sum stamps-windows-x64-mingw.zip > SHA512SUMS-mingw
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: { name: mingw-zip, path: 'stamps-windows-x64-mingw.zip' }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: { name: mingw-sums, path: 'SHA*SUMS-mingw' }
+
+  build-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with: { python-version: "3.11" }
+      - name: Install build tooling
+        run: pip install build==1.2.2
+      - name: Build sdist + wheel
+        run: python -m build --sdist --wheel --outdir dist/
+      - name: SHA256
+        run: |
+          sha256sum dist/*.whl dist/*.tar.gz > SHA256SUMS-wheel
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: wheel-dist
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+            SHA256SUMS-wheel
+
+  generate-sbom:
+    needs: [build-msvc, build-mingw]
+    if: always() && needs.build-msvc.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with: { path: artifacts }
+      - name: Generate CycloneDX SBOM (includes vendored Triangle + snaphu)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0.24.0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with: { name: sbom, path: sbom.cdx.json }
+
+  attest:
+    needs: generate-sbom
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with: { path: artifacts, merge-multiple: true }
+      - uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e  # v4.1.0
+        with:
+          subject-path: 'artifacts/stamps-windows-x64-*.zip'
+          sbom-path: 'artifacts/sbom.cdx.json'
+
+  publish:
+    needs: attest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0  # full history so the source tarball reflects HEAD
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with: { path: artifacts, merge-multiple: true }
+      - name: SignPath reminder
+        if: hashFiles('docs/SIGNPATH_STATUS.md') != ''
+        run: |
+          echo "::warning::Releasing UNSIGNED — SignPath approval still pending."
+          echo "::warning::See docs/SIGNPATH_STATUS.md for re-enable checklist."
+      - name: Generate GPL v3 source tarball
+        run: |
+          git archive --format=tar.gz --prefix=stamps-src/ HEAD > stamps-src.tar.gz
+          sha256sum stamps-src.tar.gz > SHA256SUMS-src
+      - name: Render release notes (substitute __VERSION__ for tag name)
+        run: |
+          # github.ref_name is the tag (e.g. "v1.0.0") on tag-triggered runs
+          sed "s/__VERSION__/${{ github.ref_name }}/g" \
+            .github/release-template.md > release-body.md
+          cat release-body.md
+      - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
+        with:
+          body_path: release-body.md
+          generate_release_notes: false   # use our template; autoList not desired
+          files: |
+            artifacts/stamps-windows-x64-msvc.zip
+            artifacts/stamps-windows-x64-mingw.zip
+            artifacts/SHA256SUMS-msvc
+            artifacts/SHA256SUMS-mingw
+            artifacts/SHA512SUMS-msvc
+            artifacts/SHA512SUMS-mingw
+            artifacts/sbom.cdx.json
+            stamps-src.tar.gz
+            SHA256SUMS-src
+            artifacts/stamps_windows-*.whl
+            artifacts/stamps-windows-*.tar.gz
+            artifacts/SHA256SUMS-wheel
+          # Attestation bundles are NOT release assets; they live in
+          # GitHub's attestations API. Verify with: gh attestation verify
+          # --owner <owner> stamps-windows-x64-msvc.zip
+          fail_on_unmatched_files: true
