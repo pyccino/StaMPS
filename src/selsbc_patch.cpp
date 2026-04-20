@@ -443,7 +443,8 @@ try {
   }
   catch( const char * str ) {
      cout << str << "\n";
-     return(999);
+     // [port] rc=1, not 999: see calamp.cpp catch-block comment.
+     return 1;
   }
   //catch( ... ) {
  //   return(999);

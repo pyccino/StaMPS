@@ -254,7 +254,10 @@ try {
 
   }
   catch( ... ) {
-    return(999);
+    // [port] rc=1, not 999. POSIX exit codes are 8-bit and 999 & 0xFF = 231
+    // collides with the signal-kill range (128+signum) the test harness uses
+    // to detect SIGSEGV/SIGABRT. A plain 1 signals failure unambiguously.
+    return 1;
   }
 
   return(0);
