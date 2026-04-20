@@ -116,6 +116,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0  # full history so the source tarball reflects HEAD
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with: { path: artifacts, merge-multiple: true }
       - name: SignPath reminder
@@ -123,6 +125,10 @@ jobs:
         run: |
           echo "::warning::Releasing UNSIGNED — SignPath approval still pending."
           echo "::warning::See docs/SIGNPATH_STATUS.md for re-enable checklist."
+      - name: Generate GPL v3 source tarball
+        run: |
+          git archive --format=tar.gz --prefix=stamps-src/ HEAD > stamps-src.tar.gz
+          sha256sum stamps-src.tar.gz > SHA256SUMS-src
       - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           generate_release_notes: true
@@ -134,6 +140,8 @@ jobs:
             artifacts/SHA512SUMS-msvc
             artifacts/SHA512SUMS-mingw
             artifacts/sbom.cdx.json
+            stamps-src.tar.gz
+            SHA256SUMS-src
           # Attestation bundles are NOT release assets; they live in
           # GitHub's attestations API. Verify with: gh attestation verify
           # --owner <owner> stamps-windows-x64-msvc.zip
