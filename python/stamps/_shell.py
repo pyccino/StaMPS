@@ -133,6 +133,22 @@ def write_text_lf(path: Path | str, content: str) -> None:
     _write_bytes_with_retry(Path(path), content.encode("ascii"))
 
 
+def append_text_lf(path: Path | str, text: str) -> None:
+    """Append text to an existing file with LF-only endings on every OS.
+
+    Opens the file in binary-append mode ("ab") and writes UTF-8-encoded
+    bytes so Windows text-mode newline translation can never introduce
+    \\r\\n into a file written by `write_text_lf()`. Uses \\\\?\\ long-path
+    prefix on Windows paths > 240 chars.
+
+    This is the append counterpart to `write_text_lf()` — use it instead
+    of `open(path, "a")` whenever a file must stay LF-only.
+    """
+    p = long_path(Path(path))
+    with open(p, "ab") as fh:
+        fh.write(text.encode("utf-8"))
+
+
 def write_text_for_cpp(path: Path | str, content: str) -> None:
     """Write a text file that downstream C++ ifstream(const char*) can open.
 

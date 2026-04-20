@@ -265,3 +265,24 @@ def test_calamp_in_lf_on_windows(tmp_workdir):
     main(["20200101", str(d)])
     b = (tmp_workdir / "calamp.in").read_bytes()
     assert b"\r\n" not in b
+
+
+def test_appended_lines_preserve_lf_only_on_windows(tmp_path: Path):
+    """Regression (Windows CRLF injection): append_text_lf must not emit \\r.
+
+    Seed a file with write_text_lf() (LF-only), then append via the new
+    binary-mode helper. The combined bytes must contain zero CR bytes on
+    every platform — the invariant itself is OS-agnostic even though the
+    bug it guards only manifests on Windows (text-mode open("a") there
+    would translate \\n to \\r\\n).
+    """
+    from stamps._shell import append_text_lf, write_text_lf
+
+    target = tmp_path / "pscphase.in"
+    write_text_lf(target, "256\n")
+    append_text_lf(target, "path/a.diff\npath/b.diff\n")
+
+    raw = target.read_bytes()
+    assert b"\r" not in raw
+    # Content integrity: header + two appended lines.
+    assert raw == b"256\npath/a.diff\npath/b.diff\n"
