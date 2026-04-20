@@ -568,7 +568,7 @@ try {
       masterampfile.close();
   }    
   }
-  catch( char * str ) {
+  catch( const char * str ) {
      cout << str << "\n";
      return(999);
   }   
