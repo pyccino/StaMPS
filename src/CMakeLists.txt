@@ -72,7 +72,19 @@ endif()
 install(TARGETS ${CORE_TARGETS} RUNTIME DESTINATION "${STAMPS_BIN_DIR}")
 
 enable_testing()
+# Usage-path smoke tests: run each binary with no args and assert it produces
+# output. Most binaries also exit nonzero on the usage path (WILL_FAIL catches
+# that), but cpxsum exits 0 — for it, we only assert a non-empty stdout/stderr
+# via PASS_REGULAR_EXPRESSION on the banner. Changing cpxsum's exit code is a
+# behavioral change for csh pipelines that depend on it.
 foreach(tgt IN LISTS CORE_TARGETS)
     add_test(NAME ${tgt}_usage COMMAND ${tgt})
-    set_tests_properties(${tgt}_usage PROPERTIES WILL_FAIL TRUE)
 endforeach()
+# All binaries EXCEPT cpxsum exit nonzero on no-args; mark those WILL_FAIL.
+set_tests_properties(
+    calamp_usage pscphase_usage pscdem_usage psclonlat_usage
+    selpsc_patch_usage selsbc_patch_usage
+    PROPERTIES WILL_FAIL TRUE)
+# cpxsum exits 0 but prints its usage banner. Assert the banner text is seen.
+set_tests_properties(cpxsum_usage PROPERTIES
+    PASS_REGULAR_EXPRESSION "usage: cpxsum")

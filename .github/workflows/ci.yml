@@ -110,11 +110,16 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install only documented prereqs
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake python3 python3-pip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake python3 python3-pip python3-venv
       - run: cmake -S src -B build -DCMAKE_BUILD_TYPE=Release
       - run: cmake --build build
-      - run: pip3 install .[test]
-      - run: python3 -m pytest tests/ -v -k "not requires_matlab and not requires_tcsh"
+      - name: Install into venv (Ubuntu 22.04+ is PEP 668 externally-managed)
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install .[test]
+      - run: .venv/bin/python -m pytest tests/ -v -k "not requires_matlab and not requires_tcsh"
 
   # Pre-commit enforcement: contributors who skip `pre-commit install`
   # are still gated by CI. Catches ruff/mypy/pre-commit-hook violations
