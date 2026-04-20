@@ -16,6 +16,7 @@ and paste the resulting JSON into the constants below.
 
 from __future__ import annotations
 
+import platform
 from pathlib import Path
 
 import pytest
@@ -80,8 +81,6 @@ EXPECTED_SIZES_PS = {
 }
 
 
-import platform
-
 # The fixture generator uses random.Random(SEED).gauss(...) which depends on
 # math.log + math.sqrt + math.cos — libm implementations diverge at the last
 # bit across platforms (Linux glibc vs MinGW mingw-w64 vs macOS libSystem vs
@@ -89,16 +88,13 @@ import platform
 # even with an identical random seed. Lock the manifest against Linux glibc
 # (the canonical reference where goldens are captured in Task 2c.2); other
 # platforms get the determinism check via the separate _determinism tests.
-_LIBM_REFERENCE = (
-    platform.system() == "Linux"
-    and platform.python_implementation() == "CPython"
-)
+_LIBM_REFERENCE = platform.system() == "Linux" and platform.python_implementation() == "CPython"
 
 
 @pytest.mark.skipif(
     not _LIBM_REFERENCE,
     reason="Manifest locked against Linux glibc libm; platform-specific last-bit "
-           "float drift on MinGW/MSVC/macOS is expected and covered by determinism tests.",
+    "float drift on MinGW/MSVC/macOS is expected and covered by determinism tests.",
 )
 def test_ps_fixture_sha256_manifest(tmp_path: Path) -> None:
     """PS-mode tree is byte-identical to the locked manifest."""
@@ -113,7 +109,7 @@ def test_ps_fixture_sha256_manifest(tmp_path: Path) -> None:
 @pytest.mark.skipif(
     not _LIBM_REFERENCE,
     reason="Manifest locked against Linux glibc libm; platform-specific last-bit "
-           "float drift on MinGW/MSVC/macOS is expected and covered by determinism tests.",
+    "float drift on MinGW/MSVC/macOS is expected and covered by determinism tests.",
 )
 def test_sb_fixture_sha256_manifest(tmp_path: Path) -> None:
     """SB-mode tree is byte-identical to the locked manifest."""

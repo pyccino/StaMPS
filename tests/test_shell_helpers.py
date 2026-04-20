@@ -141,9 +141,9 @@ def test_long_path_prefix_windows(monkeypatch):
         # Accept either \\?\ or //?/ — MinGW WindowsPath normalizes to
         # forward slashes when stringified; native Windows uses backslashes.
         s = str(got)
-        assert s.startswith("\\\\?\\") or s.startswith("//?/"), (
-            f"Expected \\\\?\\ or //?/ prefix, got: {s!r}"
-        )
+        assert s.startswith("\\\\?\\") or s.startswith(
+            "//?/"
+        ), f"Expected \\\\?\\ or //?/ prefix, got: {s!r}"
     else:
         assert got == p
 
