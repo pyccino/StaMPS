@@ -47,6 +47,11 @@ Thumbs.db
 # The generator is committed; its deterministic output is not.
 tests/fixtures/synthetic_ps/
 tests/fixtures/synthetic_sb/
+# --small variants (20x20) built on-demand by the session-scope autouse
+# conftest fixture _ensure_synthetic_small_fixture; consumed by nightly E2E
+# + PHASE→StaMPS integration tests.
+tests/fixtures/synthetic_ps_small/
+tests/fixtures/synthetic_sb_small/
 
 # MATLAB test fixture: ~3 MB, produced by
 # tests/matlab/fixtures/generate_ps_weed_large.m. The generator is

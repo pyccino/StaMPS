@@ -99,6 +99,54 @@ def _default_c_locale(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(scope="session")
+def synthetic_ps_small_path() -> Path:
+    """Build (on first request) and return ``tests/fixtures/synthetic_ps_small``.
+
+    The 200x200 ``synthetic_ps`` tree is produced by test_generate_fixtures.py
+    (session-scope-free, on-demand) and locked against a SHA256 manifest. The
+    trimmed 20x20 ``_small`` variant is NOT committed (same rationale as the
+    full-size one: generator is the source of truth, output is reproducible
+    byte-for-byte from the seed) and is only needed by nightly-E2E +
+    PHASE→StaMPS integration tests.
+
+    Opt-in (not autouse) so unit-only pytest runs don't pay the build cost.
+    Request this fixture explicitly from tests that need the small PS tree;
+    the build is skipped if the directory already exists, so dev loop cost
+    is zero after the first run.
+    """
+    from tests.fixtures.generate_fixtures import (
+        SMALL_LENGTH,
+        SMALL_WIDTH,
+        generate_ps_fixture,
+    )
+
+    ps_small = STAMPS_ROOT / "tests" / "fixtures" / "synthetic_ps_small"
+    if not ps_small.exists():
+        generate_ps_fixture(ps_small, width=SMALL_WIDTH, length=SMALL_LENGTH)
+    return ps_small
+
+
+@pytest.fixture(scope="session")
+def synthetic_sb_small_path() -> Path:
+    """Build (on first request) and return ``tests/fixtures/synthetic_sb_small``.
+
+    SB sibling of ``synthetic_ps_small_path`` — same opt-in semantics, same
+    deterministic seed, same 20x20 raster geometry. Request explicitly from
+    nightly-E2E / PHASE→StaMPS integration tests that exercise the SB path.
+    """
+    from tests.fixtures.generate_fixtures import (
+        SMALL_LENGTH,
+        SMALL_WIDTH,
+        generate_sb_fixture,
+    )
+
+    sb_small = STAMPS_ROOT / "tests" / "fixtures" / "synthetic_sb_small"
+    if not sb_small.exists():
+        generate_sb_fixture(sb_small, width=SMALL_WIDTH, length=SMALL_LENGTH)
+    return sb_small
+
+
+@pytest.fixture(scope="session")
 def phase_root() -> Path:
     """Root of a PHASE checkout, supplied by env var PHASE_ROOT.
 

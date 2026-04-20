@@ -17,19 +17,17 @@ import pytest
 @pytest.mark.windows_only
 @pytest.mark.requires_matlab
 @pytest.mark.nightly
-def test_phase_drives_stamps_end_to_end(tmp_path: Path):
-    # Both env vars must be set; skip cleanly if the test is collected in
-    # an environment that doesn't point at a PHASE checkout / installed
-    # StaMPS tree (standard dev/CI without the nightly-e2e harness).
+def test_phase_drives_stamps_end_to_end(tmp_path: Path, synthetic_ps_small_path: Path):
+    # PHASE_ROOT must point at a PHASE checkout; skip cleanly if the test is
+    # collected in an environment without one (standard dev/CI run without the
+    # nightly-e2e harness). The StaMPS tree itself is located via the
+    # ``synthetic_ps_small_path`` fixture, which builds and returns the small
+    # fixture path on first use — so STAMPS env-var gating is no longer needed.
     phase_env = os.environ.get("PHASE_ROOT")
-    stamps_env = os.environ.get("STAMPS")
-    if not phase_env or not stamps_env:
-        pytest.skip("PHASE_ROOT and STAMPS env vars required; nightly-e2e CI job sets these")
+    if not phase_env:
+        pytest.skip("PHASE_ROOT env var required; nightly-e2e CI job sets this")
     phase_root = Path(phase_env)
-    stamps_root = Path(stamps_env)
-    fixture = stamps_root / "tests/fixtures/synthetic_ps_small"
-    if not fixture.exists():
-        pytest.skip(f"Fixture not built yet: {fixture}")
+    fixture = synthetic_ps_small_path
 
     # Stage data dir as PHASE expects (one folder per acquisition date)
     data_dir = tmp_path / "data"

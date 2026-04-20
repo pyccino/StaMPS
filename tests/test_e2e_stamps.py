@@ -15,12 +15,11 @@ import pytest
 
 @pytest.mark.nightly
 @pytest.mark.requires_matlab
-def test_e2e_ps_pipeline(tmp_path: Path, stamps_root: Path):
-    # 1. Copy fixture to tmp
-    fixture_src = stamps_root / "tests" / "fixtures" / "synthetic_ps_small"
-    if not fixture_src.exists():
-        pytest.skip("synthetic_ps_small fixture not yet generated")
-    shutil.copytree(fixture_src, tmp_path / "data", dirs_exist_ok=True)
+def test_e2e_ps_pipeline(tmp_path: Path, stamps_root: Path, synthetic_ps_small_path: Path) -> None:
+    # 1. Copy fixture to tmp. The ``synthetic_ps_small_path`` fixture builds
+    #    the tree on first request (opt-in; no-op if already present) and
+    #    returns its path, so we never hit the "fixture not generated" skip.
+    shutil.copytree(synthetic_ps_small_path, tmp_path / "data", dirs_exist_ok=True)
 
     # 2. Run mt_prep_snap via shim
     shim_name = "mt_prep_snap.bat" if os.name == "nt" else "mt_prep_snap"

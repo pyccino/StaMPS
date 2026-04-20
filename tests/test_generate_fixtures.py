@@ -9,7 +9,7 @@ policy §7) is caught immediately.
 If this test fails after an intentional generator change, regenerate the
 expected manifests with::
 
-    python3 tests/fixtures/generate_fixtures.py /tmp/fx
+    python3 tests/fixtures/generate_fixtures.py --out /tmp/fx
 
 and paste the resulting JSON into the constants below.
 """
