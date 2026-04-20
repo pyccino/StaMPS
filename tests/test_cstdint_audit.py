@@ -15,18 +15,28 @@ CSTDINT_INCLUDE_RE = re.compile(r"^\s*#\s*include\s*<cstdint>", re.MULTILINE)
 
 
 def _strip_cpp_non_code(src: str) -> str:
-    """Remove C/C++ block comments, line comments, and string literals.
+    """Remove C/C++ block comments, line comments, and string/char literals.
 
     The result preserves line structure and whitespace enough for
     line-anchored regexes (e.g., `#include <cstdint>` on its own line)
-    to still match. String contents are blanked to `""` so that tokens
-    like `int32_t` or `<cstdint>` hidden inside a literal do not satisfy
-    the use- or include- checks.
+    to still match. String and character literal contents are blanked so
+    that tokens like `int32_t` or `<cstdint>` hidden inside a literal do
+    not satisfy the use- or include- checks.
+
+    Assumptions (StaMPS src/ satisfies both today):
+      * No C++11 raw-string literals `R"(...)"` — those are NOT stripped
+        and their contents would leak through. Audit this helper if raw
+        strings are introduced.
+      * Ordinary char literals like `'{'` or `'"'` ARE stripped, to avoid
+        a stray `'"'` breaking the string-literal regex's quote pairing.
     """
     # Block comments first (non-greedy, dotall).
     src = re.sub(r"/\*.*?\*/", "", src, flags=re.DOTALL)
     # Line comments.
     src = re.sub(r"//[^\n]*", "", src)
+    # Character literals (handles backslash escapes) — must precede the
+    # string-literal strip so a lone `'"'` doesn't unbalance quotes.
+    src = re.sub(r"'(?:\\.|[^'\\])*'", "''", src)
     # String literals (handles backslash escapes).
     src = re.sub(r'"(?:\\.|[^"\\])*"', '""', src)
     return src

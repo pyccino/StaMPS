@@ -12,8 +12,12 @@ from pathlib import Path
 
 
 def _strip_cpp_non_code(src: str) -> str:
+    # Assumes StaMPS src/ does NOT use C++11 raw-string literals R"(...)"
+    # — their contents would leak through. Char literals ARE stripped so
+    # a lone `'"'` can't unbalance the string-literal quote pairing.
     src = re.sub(r"/\*.*?\*/", "", src, flags=re.DOTALL)
     src = re.sub(r"//[^\n]*", "", src)
+    src = re.sub(r"'(?:\\.|[^'\\])*'", "''", src)
     src = re.sub(r'"(?:\\.|[^"\\])*"', '""', src)
     return src
 
