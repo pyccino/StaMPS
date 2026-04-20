@@ -1,5 +1,20 @@
 function val = sp_parse_ifg_dims(path, key, varargin)
 %SP_PARSE_IFG_DIMS Extract a numeric value following a key in a text file.
+%   VAL = SP_PARSE_IFG_DIMS(PATH, KEY) searches PATH for KEY and returns
+%   the first numeric literal that follows it (int/float/scientific).
+%   Missing key returns NaN; pass 'Strict', true to throw instead.
+%
+%   Locale & decimal separator:
+%     The regex token pattern and the str2double conversion both expect
+%     DOT-DECIMAL separators. This matches the SNAP `.par` file spec
+%     (ASCII dot-decimal, by the SNAP Graph Processing documentation).
+%     Parsing is locale-invariant: str2double does NOT consult the active
+%     locale, so Windows MATLAB under German/Italian (comma-decimal)
+%     locale still parses these files correctly.
+%
+%   Errors:
+%     StaMPS:parseIfgDims:fileNotFound - path does not exist
+%     StaMPS:parseIfgDims:keyNotFound  - strict mode and key absent
     p = inputParser;
     addParameter(p, 'Strict', false);
     parse(p, varargin{:});
