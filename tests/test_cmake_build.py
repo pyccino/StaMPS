@@ -1,6 +1,7 @@
 """Verify CMakeLists.txt builds all 7 core binaries on every platform."""
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -16,9 +17,19 @@ CORE_BINARIES = [
     "selsbc_patch",
 ]
 
+# Module-level skip: without cmake on PATH, the fixture itself raises
+# FileNotFoundError and every parameterized test ERRORs. Skip the whole
+# module cleanly so the summary shows `s` not `E`.
+pytestmark = pytest.mark.skipif(shutil.which("cmake") is None, reason="cmake not on PATH")
+
 
 @pytest.fixture(scope="module")
 def cmake_build(stamps_root: Path, tmp_path_factory):
+    # Defense-in-depth: the pytestmark above should already have skipped
+    # the module, but a future refactor that imports this fixture from
+    # elsewhere must still skip instead of crashing.
+    if shutil.which("cmake") is None:
+        pytest.skip("cmake not on PATH")
     build_dir = tmp_path_factory.mktemp("cmake_build")
     subprocess.check_call(
         [
@@ -42,6 +53,8 @@ def test_cmake_builds_binary(name: str, cmake_build: Path, stamps_root: Path):
 
 
 def test_ctest_smoke(cmake_build: Path):
+    if shutil.which("ctest") is None:
+        pytest.skip("ctest not on PATH")
     proc = subprocess.run(
         ["ctest", "--test-dir", str(cmake_build), "--output-on-failure", "-C", "Release"],
         capture_output=True,
