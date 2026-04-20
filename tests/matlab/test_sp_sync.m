@@ -17,9 +17,18 @@ classdef test_sp_sync < matlab.unittest.TestCase
             fclose(fid);
             fileattrib(stubPath, '+x');
             origPath = getenv('PATH');
-            cleanup = onCleanup(@() (setenv('PATH', origPath), rmdir(stubDir, 's')));
+            tc.addTeardown(@() setenv('PATH', origPath));
+            tc.addTeardown(@() rmdir(stubDir, 's'));
             setenv('PATH', [stubDir pathsep origPath]);
             tc.verifyError(@() sp_sync(), 'StaMPS:sp_sync:syncFailed');
+        end
+        function failure_id_present_in_source(tc)
+            % Static source-level check complements the live stub test;
+            % guards against the taxonomy id silently drifting.
+            src = which('sp_sync');
+            tc.assumeNotEmpty(src);
+            tc.verifyTrue(contains(fileread(src), 'StaMPS:sp_sync:syncFailed'), ...
+                'sp_sync source must raise StaMPS:sp_sync:syncFailed');
         end
     end
 end

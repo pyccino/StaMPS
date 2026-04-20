@@ -16,7 +16,7 @@ classdef test_sp_which < matlab.unittest.TestCase
             fdir = fullfile(fileparts(mfilename('fullpath')), 'fixtures', 'path_ext');
             tc.assumeTrue(exist(fdir, 'dir') == 7, sprintf('Fixture dir missing: %s', fdir));
             origPath = getenv('PATH');
-            cleanup = onCleanup(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATH', origPath));
             setenv('PATH', [fdir pathsep origPath]);
             tc.verifyNotEmpty(sp_which('foo'));
             tc.verifyNotEmpty(sp_which('bar'));
@@ -31,7 +31,8 @@ classdef test_sp_which < matlab.unittest.TestCase
             comFile = fullfile(fdir, 'foo.com');
             if ~exist(comFile, 'file'); fclose(fopen(comFile, 'w')); end
             origPath = getenv('PATH'); origExt = getenv('PATHEXT');
-            cleanup = onCleanup(@() (setenv('PATH', origPath), setenv('PATHEXT', origExt)));
+            tc.addTeardown(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATHEXT', origExt));
             setenv('PATH', [fdir pathsep origPath]);
             setenv('PATHEXT', [origExt pathsep '.COM']);
             tc.verifyNotEmpty(sp_which('foo'));
@@ -43,14 +44,14 @@ classdef test_sp_which < matlab.unittest.TestCase
             fdir = fullfile(getenv('STAMPS'), 'external', 'triangle', 'bin');
             tc.assumeTrue(exist(fdir, 'dir') == 7, 'Triangle not built');
             origPath = getenv('PATH');
-            cleanup = onCleanup(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATH', origPath));
             setenv('PATH', [fdir pathsep origPath]);
             tc.verifyEqual(sp_which('TRIANGLE'), sp_which('Triangle'));
         end
 
         function test_respects_path_runtime_change(tc)
             origPath = getenv('PATH');
-            cleanup = onCleanup(@() setenv('PATH', origPath));
+            tc.addTeardown(@() setenv('PATH', origPath));
             setenv('PATH', '');
             tc.verifyEqual(sp_which('matlab'), '');
         end
@@ -70,7 +71,6 @@ classdef test_sp_which < matlab.unittest.TestCase
         function test_does_not_invoke_subprocess(tc)
             % sp_which must not shell out (would be slow on Windows + recursive).
             % Spy by overriding system() locally; if invoked, set a flag.
-            spy = onCleanup(@() rmpath(tempdir));
             spyDir = tempfile_dir();
             mkdir(spyDir);
             spyFile = fullfile(spyDir, 'system.m');
@@ -80,7 +80,8 @@ classdef test_sp_which < matlab.unittest.TestCase
             fprintf(fid, 'end\n');
             fclose(fid);
             addpath(spyDir);
-            cleanupSpy = onCleanup(@() (rmpath(spyDir), rmdir(spyDir, 's')));
+            tc.addTeardown(@() rmpath(spyDir));
+            tc.addTeardown(@() rmdir(spyDir, 's'));
             tc.verifyWarningFree(@() sp_which('matlab'));
         end
 
@@ -96,6 +97,18 @@ classdef test_sp_which < matlab.unittest.TestCase
             tc.verifyError( ...
                 @() sp_which_required('this-binary-name-does-not-exist-anywhere'), ...
                 'StaMPS:sp_which:notFound');
+        end
+
+        % Explicit contract: sp_which returns '' on miss (no throw);
+        % sp_which_required raises StaMPS:sp_which:notFound.
+        function test_sp_which_missing_returns_empty(tc)
+            tc.verifyEqual(sp_which('this-binary-does-not-exist-zzz'), '');
+        end
+
+        function test_sp_which_required_missing_throws_not_found(tc)
+            tc.verifyError(@() sp_which_required('this-binary-does-not-exist-zzz'), ...
+                           'StaMPS:sp_which:notFound');
+        end
         end
     end
 end
