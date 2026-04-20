@@ -12,10 +12,37 @@ import pytest
 STAMPS_ROOT = Path(__file__).parent.parent.resolve()
 
 
+# Register a global Hypothesis profile at module load so every property test
+# in the suite inherits the same reproducibility settings (max_examples,
+# deadline, health-check suppressions) without per-test `@settings` overrides.
+# Windows CI is slow enough that Hypothesis's default deadline triggers
+# spurious flakes; disabling it here centralises the decision.
+try:
+    from hypothesis import HealthCheck, settings
+
+    settings.register_profile(
+        "default",
+        max_examples=100,
+        deadline=None,  # Windows CI is slow; avoid flaky deadline failures
+        suppress_health_check=[HealthCheck.function_scoped_fixture],
+    )
+    settings.load_profile("default")
+except ImportError:
+    pass
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Auto-skip tests marked linux_only / windows_only / requires_tcsh
-    based on the host. Keeps the marker-aware tests implicit (no
-    per-test skipif boilerplate) and matches the PHASE-side conftest.
+    """Auto-skip tests marked linux_only / windows_only / requires_tcsh /
+    requires_matlab / windows_mingw based on the host. Keeps the marker-aware
+    tests implicit (no per-test skipif boilerplate) and matches the PHASE-side
+    conftest.
+
+    Also widens the default 120s per-test timeout (see `addopts` in
+    pyproject.toml) to 900s for tests marked `nightly`; those shell out to
+    MATLAB / full pipeline runs with 300-600s subprocess budgets of their own.
+    The tight default exists to bound Hypothesis property tests whose
+    deadline=None was set to dodge Windows-CI flakes — so the hard
+    pytest-timeout is now the only runaway-loop safeguard.
     """
     skip_non_linux = pytest.mark.skip(reason="test marked linux_only; host is not Linux")
     skip_non_windows = pytest.mark.skip(reason="test marked windows_only; host is not Windows")
@@ -23,6 +50,10 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     is_linux = sys.platform.startswith("linux")
     is_windows = sys.platform.startswith("win")
     have_tcsh = shutil.which("tcsh") is not None
+    have_matlab = shutil.which("matlab") is not None or shutil.which("matlab.exe") is not None
+    is_windows_mingw = sys.platform.startswith("win") and (
+        shutil.which("gcc") is not None or shutil.which("mingw32-make") is not None
+    )
     for item in items:
         if "linux_only" in item.keywords and not is_linux:
             item.add_marker(skip_non_linux)
@@ -30,6 +61,12 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(skip_non_windows)
         if "requires_tcsh" in item.keywords and not have_tcsh:
             item.add_marker(skip_no_tcsh)
+        if "requires_matlab" in item.keywords and not have_matlab:
+            item.add_marker(pytest.mark.skip(reason="requires_matlab: matlab not on PATH"))
+        if "windows_mingw" in item.keywords and not is_windows_mingw:
+            item.add_marker(pytest.mark.skip(reason="windows_mingw: requires Windows + MinGW"))
+        if "nightly" in item.keywords:
+            item.add_marker(pytest.mark.timeout(900))
 
 
 @pytest.fixture(scope="session")
