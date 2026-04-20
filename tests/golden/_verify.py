@@ -12,6 +12,7 @@ File-type rules:
 
 Exit 0 if all passes, 1 on any mismatch. Prints one line per mismatch.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -77,7 +78,19 @@ def _ulp_compare_float32(a_bytes: bytes, b_bytes: bytes) -> tuple[bool, str]:
     return True, ""
 
 
-def compare_trees(committed: Path, fresh: Path) -> list[str]:
+def compare_trees(
+    committed: Path,
+    fresh: Path,
+    ignore_extras: set[str] | None = None,
+) -> list[str]:
+    """Compare committed golden tree against freshly produced tree.
+
+    ignore_extras: basenames to accept as present in fresh but not in
+    committed (e.g. run-local shims like 'matlab', or symlinks the test
+    harness creates in the workdir). Files in committed but absent in
+    fresh are ALWAYS flagged — they represent a regression in the port.
+    """
+    ignore_extras = ignore_extras or set()
     mismatches: list[str] = []
     missing: list[str] = []
     for src in sorted(committed.rglob("*")):
@@ -102,6 +115,11 @@ def compare_trees(committed: Path, fresh: Path) -> list[str]:
     committed_set = {p.relative_to(committed) for p in committed.rglob("*") if p.is_file()}
     fresh_set = {p.relative_to(fresh) for p in fresh.rglob("*") if p.is_file()}
     for extra in sorted(fresh_set - committed_set):
+        # Skip any component that is an ignored basename (e.g. "matlab"
+        # under the workdir root, or any nested file whose basename is
+        # listed in ignore_extras).
+        if extra.name in ignore_extras or any(part in ignore_extras for part in extra.parts):
+            continue
         mismatches.append(f"{extra}: extra file in fresh tree (not in golden)")
     for m in missing:
         mismatches.append(f"{m}: missing from fresh tree")
@@ -120,7 +138,9 @@ def main() -> int:
         for m in mismatches:
             print(f"  {m}")
         return 1
-    print(f"VERIFY OK (all files match; {sum(1 for _ in committed.rglob('*') if _.is_file())} files)")
+    print(
+        f"VERIFY OK (all files match; {sum(1 for _ in committed.rglob('*') if _.is_file())} files)"
+    )
     return 0
 
 

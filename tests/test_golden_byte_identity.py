@@ -1,17 +1,19 @@
 """Byte-identity test: the Python mt_prep_snap port produces output
-byte-for-byte identical to the committed linux+csh golden tree under
+that matches the committed linux+csh golden tree under
 tests/golden/linux_csh/ps_single/.
 
-Only runs on Linux (the reference platform) with the vendored synthetic_ps
-fixture. MinGW byte-identity is covered by AC3 (test_acceptance.py); MSVC
-ulp-tolerant is covered by AC4.
+Text + integer artifacts must be byte-identical (algorithmic identity
+with the csh pipeline); float32 binaries (.flt, .da, .hgt, .ph, .ll)
+are compared ulp-tolerant via tests/golden/_verify.py — last-bit drift
+between glibc versions on the committed-golden host and the test host
+is expected. Full byte-identity under MinGW is exercised by AC3;
+MSVC ulp-tolerance by AC4.
 
 Task 2c.3 in the port plan.
 """
 
 from __future__ import annotations
 
-import hashlib
 import os
 import shutil
 import subprocess
@@ -19,6 +21,9 @@ import sys
 from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "golden"))
+import _verify  # noqa: E402  — local helper, not a package
 
 
 @pytest.mark.linux_only
@@ -102,27 +107,16 @@ def test_python_mt_prep_snap_matches_csh_golden(stamps_root: Path, tmp_path: Pat
         f"stderr:\n{result.stderr.decode(errors='replace')}"
     )
 
-    # Compare every file in golden against run output. fixture + matlab
-    # shim + stamps run-log artifacts are excluded.
-    exclusions = {"fixture", "matlab", "ps_parms_initial.log", "sb_parms_initial.log"}
-    mismatches: list[str] = []
-    missing: list[str] = []
-    for src in sorted(golden.rglob("*")):
-        if not src.is_file():
-            continue
-        rel = src.relative_to(golden)
-        if rel.name in exclusions:
-            continue
-        actual = workdir / rel
-        if not actual.exists():
-            missing.append(str(rel))
-            continue
-        if (
-            hashlib.sha256(src.read_bytes()).hexdigest()
-            != hashlib.sha256(actual.read_bytes()).hexdigest()
-        ):
-            mismatches.append(str(rel))
-    assert not missing, f"Python port missing artifacts present in golden: {missing}"
-    assert (
-        not mismatches
-    ), f"Python port output diverged byte-for-byte from csh golden: {mismatches}"
+    # Run the fresh workdir tree through the same classifier the CI
+    # verify step uses: byte-identical for text/int, ulp-tolerant for
+    # float32. The Python port's run-local shim (matlab) and logs are
+    # not in the golden tree so they're naturally ignored.
+    mismatches = _verify.compare_trees(
+        golden,
+        workdir,
+        ignore_extras={"matlab", "fixture", "ps_parms_initial.log", "sb_parms_initial.log"},
+    )
+    assert not mismatches, (
+        "Python port output diverged from csh golden (see _verify classification):\n  "
+        + "\n  ".join(mismatches)
+    )
