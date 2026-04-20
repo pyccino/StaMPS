@@ -1,5 +1,5 @@
 // *********************************************************************
-// cpxsum - program to sum (or subtract) 2 complex phase files 
+// cpxsum - program to sum (or subtract) 2 complex phase files
 // ---------------------------------------------------------------------
 // AUTHOR    : Andy Hooper
 // ---------------------------------------------------------------------
@@ -17,10 +17,10 @@ using namespace std;
 #include <fstream>
 using namespace std;
 
-#include <complex> 
+#include <complex>
 using namespace std;
 
-#include <cstring> 
+#include <cstring>
 using namespace std;
 
 #include <cstdlib>  // [MA] gcc 4.3.x for exit and atoi
@@ -43,15 +43,15 @@ int main(int  argc, char *argv[] )
     printf("       NORMFLAG is 1 to normalize the amplitude of 2nd file\n\n");
     exit(0);
   }
-  
+
 //  char* infile1;
-  const char* infile1; // [MA] gcc 4.3.x 
+  const char* infile1; // [MA] gcc 4.3.x
   infile1=argv[1];
 //  char* infile2;
-  const char* infile2; // [MA] gcc 4.3.x 
+  const char* infile2; // [MA] gcc 4.3.x
   infile2=argv[2];
 //  char* outfile;
-  const char* outfile; // [MA] gcc 4.3.x 
+  const char* outfile; // [MA] gcc 4.3.x
   outfile=argv[3];
 //  char* formind;
   const char* formind;  // [MA] deprication fix
@@ -61,19 +61,19 @@ int main(int  argc, char *argv[] )
   }
   else {
       formind="cr4";
-  } 
+  }
   if (argc > 6 ) {
       sumflag=atoi(argv[6]);
   }
   else {
       sumflag=1;
-  } 
+  }
   if (argc > 7 ) {
       normflag=atoi(argv[7]);
   }
   else {
       normflag=0;
-  } 
+  }
 
    /* open files */
     ifstream fpin1;
@@ -121,7 +121,7 @@ int main(int  argc, char *argv[] )
 
  /* allocate memory */
  complex<float>* inrec1 = new complex<float>[width];
- int file2size; 
+ int file2size;
  if (strncmp(formind,"cr4",3)==0) {
      file2size=sizeof(complex<float>);
      cout << "format of " << infile2 << " assumed complex single\n";
@@ -130,19 +130,19 @@ int main(int  argc, char *argv[] )
      file2size=sizeof(float);
      cout << "format of " << infile2 << " assumed real single\n";
  }
- char* inrec2 = new char[width*file2size]; 
+ char* inrec2 = new char[width*file2size];
  fpin1.read (reinterpret_cast<char*>(inrec1), width*sizeof(complex<float>));
  fpin2.read (reinterpret_cast<char*>(inrec2), width*file2size);
  for (i=0;i<nlf;i++) {
    for (j=0;j<width;j++) {
       complex<float> cpxphase2;
       if (strncmp(formind,"cr4",3)==0) {
-          cpxphase2 = *reinterpret_cast<complex<float>*>(&inrec2[j*file2size]); 
+          cpxphase2 = *reinterpret_cast<complex<float>*>(&inrec2[j*file2size]);
       }
       else {
-          float phase2 = *reinterpret_cast<float*>(&inrec2[j*file2size]); 
+          float phase2 = *reinterpret_cast<float*>(&inrec2[j*file2size]);
           complex<float> J(0,1);
-          cpxphase2 = exp(J*phase2); 
+          cpxphase2 = exp(J*phase2);
       }
 
       if (sumflag < 0)
@@ -157,7 +157,7 @@ int main(int  argc, char *argv[] )
    fpin1.read (reinterpret_cast<char*>(inrec1),width*sizeof(complex<float>));
    fpin2.read (reinterpret_cast<char*>(inrec2), width*file2size);
  }
-     
+
  /* clean up */
 cout << "Output written to " << outfile << "\n";
 fpin1.close();

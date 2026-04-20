@@ -3,7 +3,7 @@
 
 
 template <class k>
-void tbytescale (k *indat, unsigned char *outdat, int ns, int nl, float scale, float offset, int flipflag) 
+void tbytescale (k *indat, unsigned char *outdat, int ns, int nl, float scale, float offset, int flipflag)
 {
 
 	unsigned char *outptr ;
@@ -14,10 +14,10 @@ void tbytescale (k *indat, unsigned char *outdat, int ns, int nl, float scale, f
 	if (flipflag %2) hflip=1 ;
 	if (flipflag /2) vflip=1 ;
 
-	for (i=0; i<nl; i++) 
+	for (i=0; i<nl; i++)
 	{
 		i_out = (vflip)? nl -i - 1 : i ;
-	for (j=0; j<ns; j++) 
+	for (j=0; j<ns; j++)
 	{
 		j_out = (hflip)? ns -j - 1 : j ;
 		datptr = indat + i * ns + j ;
@@ -34,7 +34,7 @@ void tbytescale (k *indat, unsigned char *outdat, int ns, int nl, float scale, f
 }
 
 void bytescale (unsigned char *indat, unsigned char *outdat, int ns, int nl, float
-	scale, float offset, int dtype, int flipflag) 
+	scale, float offset, int dtype, int flipflag)
 {
 	if (dtype==0)
 		tbytescale (&indat[0], outdat, ns, nl, scale, offset, flipflag) ;

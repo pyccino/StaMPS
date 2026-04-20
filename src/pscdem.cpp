@@ -12,23 +12,23 @@
 // 09/2015 AH Allow double precision
 // ==============================================
 
-#include <iostream>  
-using namespace std;
-     
-#include <fstream>  
+#include <iostream>
 using namespace std;
 
-#include <complex>  
+#include <fstream>
 using namespace std;
-     
-#include <string>  
+
+#include <complex>
 using namespace std;
-     
-#include <cmath>  
+
+#include <string>
 using namespace std;
-     
+
+#include <cmath>
+using namespace std;
+
 #include <cstdio>
-using namespace std;     
+using namespace std;
 
 #include <cstdlib>
 using namespace std;
@@ -49,7 +49,7 @@ int main(int  argc, char *argv[] ) {    // [MA]  long --> int for gcc 4.3.x
 try {
 
   if (argc < 2)
-  {	  
+  {
      cout << "Usage: pscdem pscands.1.ij pscands.1.hgt precision" << endl << endl;
      cout << "Input parameters:" << endl;
      cout << "  parmfile   (input)  width of dem files (range bins)" << endl;
@@ -58,8 +58,8 @@ try {
      cout << "  pscands.1.hgt (output) height of PS candidiates" << endl << endl;
      cout << "  precision(input) d or f (default)" << endl;
      throw "";
-  }   
-     
+  }
+
 //  char *ijname;
   const char *ijname;        // [MA] deprication fix
   if (argc < 3)
@@ -80,50 +80,50 @@ try {
   ifstream parmfile (argv[1], ios::in);
   parmfile.imbue(std::locale::classic());
   if (! parmfile.is_open())
-  {	  
-      cout << "pscdem: Error opening file " << argv[1] << endl; 
+  {
+      cout << "pscdem: Error opening file " << argv[1] << endl;
       throw "";
-  }    
+  }
 
   ifstream psfile (ijname, ios::in|ios::binary);
   psfile.imbue(std::locale::classic());
   cout << "opening " << ijname << "...\n";
 
   if (! psfile.is_open())
-  {	    
-      cout << "pscdem: Error opening file " << ijname << endl; 
+  {
+      cout << "pscdem: Error opening file " << ijname << endl;
       throw "";
   }
 
   ofstream outfile(outfilename,ios::out);
   outfile.imbue(std::locale::classic());
   if (! outfile.is_open())
-  {	  
-      cout << "pscdem: Error opening file " << outfilename << endl; 
+  {
+      cout << "pscdem: Error opening file " << outfilename << endl;
       throw "";
-  }    
+  }
 
   char line[256];
   int num_files = 1;
   int width = 0;
   char ifgfilename[256];
-  
+
   parmfile >> width;
-  cout << "pscdem: width = " << width << "\n";	  
+  cout << "pscdem: width = " << width << "\n";
   parmfile.getline(ifgfilename,256);
 
   ifstream* ifgfile   = new ifstream[num_files];
   float* calib_factor = new float[num_files];
-      
+
   parmfile >> ifgfilename;
   ifgfile[0].open (ifgfilename, ios::in|ios::binary);
   ifgfile[0].imbue(std::locale::classic());
   cout << "pscdem: opening " << ifgfilename << "...\n";
 
-  int nodem_sw = 0;   
+  int nodem_sw = 0;
   if (! ifgfile[0].is_open())
-  {	    
-      cout << "pscdem: Warning: cannot open " << ifgfilename << " - assumed all zeros" << endl; 
+  {
+      cout << "pscdem: Warning: cannot open " << ifgfilename << " - assumed all zeros" << endl;
       nodem_sw = 1;
   }
 
@@ -132,18 +132,18 @@ try {
   ifgfile[0].read(header,32);
   if (*reinterpret_cast<int32_t*>(header) == magic)
       cout << "pscdem: sun raster file - skipping header\n";
-  else ifgfile[0].seekg(ios::beg); 
-  
+  else ifgfile[0].seekg(ios::beg);
+
   parmfile.close();
-  
+
   char buffer[1000];
 
-  int sizeofpixel; // 
+  int sizeofpixel; //
   if (prec[0]=='d')
   {
       sizeofpixel=sizeof(double);
       cout << "pscdem: input file specified as double precision\n";
-  }else 
+  }else
   {
       sizeofpixel=sizeof(float);
       cout << "pscdem: input file specified as single precision\n";
@@ -159,16 +159,16 @@ try {
 
   long xyaddr_save = 0;
 
-  while (! psfile.eof() ) 
-  //for (int dummyi=0; dummyi<100; dummyi++) 
+  while (! psfile.eof() )
+  //for (int dummyi=0; dummyi<100; dummyi++)
   {
     long xyaddr = (y*width+x)*sizeofpixel;
 
     if (nodem_sw == 0)
     {
-      ifgfile[0].seekg(xyaddr, ios::beg);	    
+      ifgfile[0].seekg(xyaddr, ios::beg);
       ifgfile[0].read (ifg_pixel, sizeofpixel);
-    } 
+    }
     outfile.write(ifg_pixel, sizeofpixel);
 
     if (pscid/100000.0 == rint(pscid/100000.0))
@@ -176,19 +176,18 @@ try {
 
     psfile >> pscid >> y >> x;
     psfile.getline(buffer,1000);
-  }   
-   
-  
+  }
+
+
   }
   catch( char * str ) {
      cout << str << "\n";
      return(999);
-  }   
+  }
   catch( ... ) {
     return(999);
   }
 
   return(0);
-       
-};
 
+};

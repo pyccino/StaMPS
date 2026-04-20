@@ -5,7 +5,7 @@
 // AUTHOR    : Andy Hooper
 // ---------------------------------------------------------------------
 // WRITTEN   : 04.08.2003
-//  
+//
 // Change History
 // ==============================================
 // 03/2009 MA Fix for gcc 4.3.x
@@ -17,29 +17,29 @@
 // 08/2017 AH add "else" in  mask processing
 // ==============================================
 
-#include <string.h> 
+#include <string.h>
 using namespace std;
 
-#include <iostream>  
-using namespace std;
-     
-#include <fstream>  
+#include <iostream>
 using namespace std;
 
-#include <complex>  
+#include <fstream>
 using namespace std;
-     
-#include <vector>  
+
+#include <complex>
 using namespace std;
-     
-#include <cmath>  
+
+#include <vector>
 using namespace std;
-     
+
+#include <cmath>
+using namespace std;
+
 #include <cstdio>
-using namespace std;     
+using namespace std;
 
-#include <cstdlib>     
-using namespace std;     
+#include <cstdlib>
+using namespace std;
 
 #include <climits>
 using namespace std;
@@ -121,7 +121,7 @@ int main(int  argc, char *argv[] ) {   // [MA]  long --> int for gcc 4.3.x
 try {
 
   if (argc < 3)
-  {	  
+  {
      cout << "Usage: selpsc parmfile patch.in pscands.1.ij pscands.1.da mean_amp.flt precision byteswap maskfile " << endl << endl;
      cout << "input parameters:" << endl;
      cout << "  parmfile (input) amplitude dispersion threshold" << endl;
@@ -136,40 +136,40 @@ try {
      cout << "  maskfile   (input)  mask rows and columns (optional)" << endl;
      cout << "  master amplitude (input) in case files in parmfile are ifgs not SLCs (optional)" << endl;
      throw "";
-  }   
-     
+  }
+
 //  char *ijname;
   const char *ijname;  // [MA]
-  if (argc < 4) 
+  if (argc < 4)
      ijname="pscands.1.ij";
-  else ijname = argv[3];   
+  else ijname = argv[3];
 
   char jiname[256]; // float format big endian for gamma
   strcpy (jiname,ijname);
   strcat (jiname,".int");
   //MCC
   char ijname0[256]; //used to store PS with at least one amplitude =0. This can happen if frames do not fully overlap
-                  
+
   strcpy (ijname0,ijname);
   strcat (ijname0,"0");
   cout << "file name for zero amplitude PS: " << ijname0 << "\n";
 //  char *ampoutname;
-//  if (argc < 4) 
+//  if (argc < 4)
 //     ampoutname="pscands.1.amp";
-//  else ampoutname = argv[3];   
-     
+//  else ampoutname = argv[3];
+
 //  char *daoutname;
   const char *daoutname; // [MA]
-  if (argc < 5) 
+  if (argc < 5)
      daoutname="pscands.1.da";
-  else daoutname = argv[4];   
-     
+  else daoutname = argv[4];
+
 //  char *meanoutname;
   const char *meanoutname; // [MA]
-  if (argc < 6) 
+  if (argc < 6)
      meanoutname="mean_amp.flt";
-  else meanoutname = argv[5];   
-  
+  else meanoutname = argv[5];
+
   const char *prec;
   if (argc < 7)
      prec="f";
@@ -182,48 +182,48 @@ try {
 
 //  char *maskfilename;
   const char *maskfilename; // [MA]
-  if (argc < 9) 
+  if (argc < 9)
      maskfilename="";
-  else maskfilename = argv[8];   
+  else maskfilename = argv[8];
 
 
   char masterampfilename[256]="0000";
   char masteramp_exists = 0;
-  if (argc < 10) 
+  if (argc < 10)
   {
   }
   else
-  { 
+  {
       ifstream masterparmfile (argv[9], ios::in);
       masterparmfile.imbue(std::locale::classic());
       if (! masterparmfile.is_open())
-      {	  
-          cout << "Error opening file " << argv[9] << "\n"; 
+      {
+          cout << "Error opening file " << argv[9] << "\n";
           throw "";
-      }    
+      }
       masterparmfile >> masterampfilename;
   }
 
   ifstream masterampfile (masterampfilename, ios::in);
   masterampfile.imbue(std::locale::classic());
   if (masterampfile.is_open())
-  {	  
+  {
       masteramp_exists=1;
       cout << "opening " << masterampfilename << "...\n";
-  }    
-     
+  }
+
   ifstream parmfile (argv[1], ios::in);
   parmfile.imbue(std::locale::classic());
   if (! parmfile.is_open())
-  {	  
-      cout << "Error opening file " << argv[1] << "\n"; 
+  {
+      cout << "Error opening file " << argv[1] << "\n";
       throw "";
-  }    
-   
-      
+  }
+
+
   char line[256];
   int num_files = 0;
-  
+
   int width = 0;
   float D_thresh = 0;
   int pick_higher = 0;
@@ -231,12 +231,12 @@ try {
   parmfile >> D_thresh;
   cout << "dispersion threshold = " << D_thresh << "\n";
   float D_thresh_sq = D_thresh*D_thresh;
-  if (D_thresh<0) { 
+  if (D_thresh<0) {
       pick_higher=1;
   }
 
   parmfile >> width;
-  cout << "width = " << width << "\n";	  
+  cout << "width = " << width << "\n";
   parmfile.getline(line,256);
   int savepos=parmfile.tellg();
   parmfile.getline(line,256);
@@ -244,15 +244,15 @@ try {
   {
       parmfile.getline(line,256);
       num_files++;
-  }    
+  }
   //parmfile >> num_files;
   parmfile.clear();
   parmfile.seekg(savepos);
   char ampfilename[256];
   ifstream* ampfile   = new ifstream[num_files];
   register float* calib_factor = new float[num_files];
-      
-  for (register int i=0; i<num_files; ++i) 
+
+  for (register int i=0; i<num_files; ++i)
   {
     parmfile >> ampfilename >> calib_factor[i];
     ampfile[i].open (ampfilename, ios::in|ios::binary);
@@ -260,8 +260,8 @@ try {
     cout << "opening " << ampfilename << "...\n";
 
     if (! ampfile[i].is_open())
-    {	    
-        cout << "Error opening file " << ampfilename << "\n"; 
+    {
+        cout << "Error opening file " << ampfilename << "\n";
 	throw "";
     }
 
@@ -270,19 +270,19 @@ try {
     ampfile[i].read(header,32);
     if (*reinterpret_cast<long*>(header) == magic)
         cout << "sun raster file - skipping header\n";
-    else ampfile[i].seekg(ios::beg); 
+    else ampfile[i].seekg(ios::beg);
   }
-  
+
   parmfile.close();
   cout << "number of amplitude files = " << num_files << "\n";
 
   ifstream patchfile (argv[2], ios::in);
   patchfile.imbue(std::locale::classic());
   if (! patchfile.is_open())
-  {	  
-      cout << "Error opening file " << argv[2] << "\n"; 
+  {
+      cout << "Error opening file " << argv[2] << "\n";
       throw "";
-  }    
+  }
 
   int rg_start=0;
   int rg_end=INT_MAX;
@@ -321,8 +321,8 @@ try {
   pbuf->pubseekpos (0,ios::in);
   numlines=size/width/sizeofelement/2;
 
-  cout << "number of lines per file = " << numlines << "\n";	  
-  
+  cout << "number of lines per file = " << numlines << "\n";
+
   cout << "patch lines = " << patch_lines  << endl;
   cout << "patch width = " << patch_width  <<  endl;
 
@@ -330,13 +330,13 @@ try {
   maskfile.imbue(std::locale::classic());
   char mask_exists = 0;
   if (maskfile.is_open())
-  {	  
+  {
       mask_exists=1;
       cout << "opening " << maskfilename << "...\n";
-  }    
+  }
 
-  
-  
+
+
   ofstream ijfile(ijname,ios::out);
   ijfile.imbue(std::locale::classic());
   ofstream jifile(jiname,ios::out);
@@ -347,10 +347,10 @@ try {
   daoutfile.imbue(std::locale::classic());
   ofstream meanoutfile(meanoutname,ios::out);
   meanoutfile.imbue(std::locale::classic());
- 
+
   //complex<float>* buffer = new complex<float>[num_files*width]; // used to store 1 line of all amp files
   char* buffer = new char[num_files*patch_linebytes]; // used to store 1 line of all amp files
-  complex<float>* bufferf = reinterpret_cast<complex<float>*>(buffer); 
+  complex<float>* bufferf = reinterpret_cast<complex<float>*>(buffer);
   complex<short>* buffers = reinterpret_cast<complex<short>*>(buffer);
 
 
@@ -361,7 +361,7 @@ try {
   }
 
   char* masterampline = new char[patch_linebytes]; // used to store 1 line of all amp files
-  complex<float>* masterlinef = reinterpret_cast<complex<float>*>(masterampline); 
+  complex<float>* masterlinef = reinterpret_cast<complex<float>*>(masterampline);
   complex<short>* masterlines = reinterpret_cast<complex<short>*>(masterampline);
   for (register int x=0; x<patch_width; x++) // for each pixel in range
   {
@@ -396,33 +396,33 @@ try {
   //cout << "[debug ] " << pos_start << endl;
   //cout << "[debug ] " << (long long )(az_start-1+y)*linebytes << endl;
   //cout << "[debug ] " << (long long )(rg_start-1)*sizeofelement*2 << endl;
-  
+
   for (register int i=0; i<num_files; i++)              // read in first line from each amp file
   {
     //ampfile[i].read (reinterpret_cast<char*>(&buffer[i*width]), linebytes);
     ampfile[i].seekg (pos_start, ios::beg);
     ampfile[i].read (&buffer[i*patch_linebytes], patch_linebytes);
-  } 
-  if (mask_exists==1) 
+  }
+  if (mask_exists==1)
   {
       //maskfile.read (maskline, width);
       maskfile.seekg (pix_start, ios::beg);      // set pointer to start of patch in mask file
       maskfile.read (maskline, patch_width); // read from pointer nr_pixels
-  }    
-  if (masteramp_exists==1) 
+  }
+  if (masteramp_exists==1)
   {
       masterampfile.seekg (pos_start, ios::beg);      // set pointer to start of patch in mask file
       masterampfile.read (&masterampline[0], patch_linebytes); // read from pointer nr_pixels
-  }    
-     
-     
-  while (! ampfile[1].eof() && y < patch_lines) 
+  }
+
+
+  while (! ampfile[1].eof() && y < patch_lines)
   {
      if (y >=0) // was (y >= az_start-1)
        {
        for (register int x=0; x<patch_width; x++) // for each pixel in range (width of the patch)
        {
-     
+
         register float sumamp = 0;
         register float sumampsq = 0;
         int amp_0 =0;
@@ -472,31 +472,31 @@ try {
            }
 
            //cout << "camp: " << abs(camp) << " calib " << calib_factor[i] << " master " << abs(master_amp) << endl ;
-         
+
            register float amp=abs(camp)/calib_factor[i]/abs(master_amp); // get amp value
            //cout << "amp: " << amp << endl ;
            if (amp <=0.00005) // do not use amp = 0 values for calculating the AD and set flag to 1
            {
             amp_0=1;
             sumamp=0;
-            //cout << "coord amp zero : az  " << (az_start-1)+y << ", rng  " << (rg_start-1)+x << "\n";  
+            //cout << "coord amp zero : az  " << (az_start-1)+y << ", rng  " << (rg_start-1)+x << "\n";
             //cout << "  amp : " << amp << " \n" ;
-            continue  ; 
+            continue  ;
            }else
            {
            sumamp+=amp;
            sumampsq+=amp*amp;
            }
          }
-	
-        meanoutfile.write(reinterpret_cast<char*>(&sumamp),sizeoffloat);	
+
+        meanoutfile.write(reinterpret_cast<char*>(&sumamp),sizeoffloat);
  //       cout << "amp0: " << amp_0  << "sumamp " << sumamp <<" \n" ;
         if (maskline[x]==0 && sumamp > 0)
         {
-      //Amplitude disperion^2 
+      //Amplitude disperion^2
 	    register float D_sq=num_files*sumampsq/(sumamp*sumamp) - 1; // var/mean^2
         if (pick_higher==0 && D_sq<D_thresh_sq  ||                 \
-            pick_higher==1 && D_sq>=D_thresh_sq) 
+            pick_higher==1 && D_sq>=D_thresh_sq)
 	      {
             if (amp_0 != 1)
              {
@@ -505,7 +505,7 @@ try {
 
                ++pscid;
 
-               ijfile << pscid << " " << (az_start-1)+y << " " << (rg_start-1)+x << "\n";      
+               ijfile << pscid << " " << (az_start-1)+y << " " << (rg_start-1)+x << "\n";
                int32_t J=(rg_start-1)+x;
                int32_t I=(az_start-1)+y;
                longswap(&J);
@@ -520,11 +520,11 @@ try {
              {
               ijfile0 << pscid << " " << (az_start-1)+y << " " << (rg_start-1)+x << "\n";
              } // end if amp_0
-             
-            
+
+
          } // endif pick_highe
          } // endif maskline
-       } //for loop x++           
+       } //for loop x++
      } // endif y >=0
 
      y++;
@@ -535,48 +535,47 @@ try {
         //ampfile[i].seekg (pos_start, ios::beg);
         ampfile[i].seekg (linebytes-patch_linebytes, ios::cur);  // [MA]
         ampfile[i].read (&buffer[i*patch_linebytes], patch_linebytes);
-     } 
-     if (mask_exists==1) 
+     }
+     if (mask_exists==1)
      {
      maskfile.seekg (width-patch_width, ios::cur);  // [MA]
      maskfile.read (maskline, patch_width);
      }
-     if (masteramp_exists==1) 
+     if (masteramp_exists==1)
      {
-         masterampfile.seekg (linebytes-patch_linebytes, ios::cur);  // 
+         masterampfile.seekg (linebytes-patch_linebytes, ios::cur);  //
          masterampfile.read (&masterampline[0], patch_linebytes); // read from pointer nr_pixels
-     }    
-     
-     
+     }
+
+
      if (y/100.0 == rint(y/100.0))
         cout << y << " lines processed\n";
         //cout << pscid  << " selected PS \n";
         //cout << D_thresh_sq << "D_thresh_sq \n";
-  }  
+  }
   ijfile.close();
   jifile.close();
   ijfile0.close();
   //ampoutfile.close();
   daoutfile.close();
   meanoutfile.close();
-  if (mask_exists==1) 
-  {	  
+  if (mask_exists==1)
+  {
       maskfile.close();
-  }    
-  if (masteramp_exists==1) 
-  {	  
+  }
+  if (masteramp_exists==1)
+  {
       masterampfile.close();
-  }    
+  }
   }
   catch( const char * str ) {
      cout << str << "\n";
      return(999);
-  }   
+  }
   catch( ... ) {
     return(999);
   }
 
   return(0);
-       
-};
 
+};

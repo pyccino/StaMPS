@@ -72,16 +72,16 @@ CDisp::CDisp (Widget toplevel, char *dispfile, XInfo  *xiptr)
 	XtVaSetValues (da, XmNtraversalOn, False,
                 XmNheight, 512,
                 XmNwidth, 512,
-                NULL) ; 
-	XtAddCallback (da, XmNinputCallback, XtCallbackProc (click_da), this ) ; 
-	XtAddCallback (da, XmNexposeCallback, XtCallbackProc (expose_da), this ) ; 
+                NULL) ;
+	XtAddCallback (da, XmNinputCallback, XtCallbackProc (click_da), this ) ;
+	XtAddCallback (da, XmNexposeCallback, XtCallbackProc (expose_da), this ) ;
 
 	sprintf (temptitle, "Zoom : %s", dispfile) ;
 	zoomshell = XtVaCreatePopupShell ("topshell",
                 topLevelShellWidgetClass, xinfo_ptr->toplevel,
                 XmNtitle, "ZOOOM",
                 NULL) ;
-	
+
 	XtVaSetValues (zoomshell,
 		XmNtitle, temptitle,
 		NULL) ;
@@ -89,10 +89,10 @@ CDisp::CDisp (Widget toplevel, char *dispfile, XInfo  *xiptr)
 	XtVaSetValues (da_zm, XmNtraversalOn, False,
                 XmNheight, 256,
                 XmNwidth, 256,
-                NULL) ; 
-	XtAddCallback (da_zm, XmNinputCallback, XtCallbackProc (click_dazm), this ) ; 
-	XtAddCallback (da_zm, XmNexposeCallback, XtCallbackProc (expose_dazm), this ) ; 
-	
+                NULL) ;
+	XtAddCallback (da_zm, XmNinputCallback, XtCallbackProc (click_dazm), this ) ;
+	XtAddCallback (da_zm, XmNexposeCallback, XtCallbackProc (expose_dazm), this ) ;
+
 	WM_DELETE_WINDOW = XmInternAtom (XtDisplay (toplevel),
                 "WM_DELETE_WINDOW", False) ;
         XmAddWMProtocolCallback (dispshell, WM_DELETE_WINDOW,
@@ -120,10 +120,10 @@ void CDisp::expose (Widget w, XtPointer  xinfoeq, void *cbs)
                0, 0, samps, lines, 0, 0) ;
 }
 
-	
+
 
 void  CDisp::click_zm (Widget w, XtPointer xinfoeq, void *cbs)
-{  
+{
 	char cursbuf [80] ;
 	int    xloc, yloc, newx, newy ;
 	int    xbuffer, ybuffer ;
@@ -146,8 +146,8 @@ void  CDisp::click_zm (Widget w, XtPointer xinfoeq, void *cbs)
         XtVaGetValues (da_zm, XmNwidth, &zm_samps, XmNheight, &zm_lines, NULL) ;
             xstart = xloc - zm_samps / zm_fac / 2 ;
             ystart = yloc - zm_lines / zm_fac / 2 ;
-	xbuffer = zm_samps / zm_fac  ; 
-	ybuffer = zm_lines / zm_fac  ; 
+	xbuffer = zm_samps / zm_fac  ;
+	ybuffer = zm_lines / zm_fac  ;
 	xstart = (xstart<0) ? 0:xstart ;
 	xstart = (xstart>ns - xbuffer-1) ? ns - xbuffer-1 : xstart ;
 	ystart = (ystart<0) ? 0:ystart ;
@@ -189,12 +189,12 @@ void  CDisp::click (Widget w, XtPointer xinfoeq, void *cbs)
         XtVaGetValues (da_zm, XmNwidth, &zm_samps, XmNheight, &zm_lines, NULL) ;
         xstart = xloc - zm_samps / zm_fac / 2 ;
         ystart = yloc - zm_samps / zm_fac / 2 ;
-	xbuffer = zm_samps / zm_fac  ; 
-	ybuffer = zm_lines / zm_fac  ; 
+	xbuffer = zm_samps / zm_fac  ;
+	ybuffer = zm_lines / zm_fac  ;
 	xstart = (xstart<0) ? 0:xstart ;
         xstart = (xstart>ns - xbuffer-1) ? ns - xbuffer-1 : xstart ;
         ystart = (ystart<0) ? 0:ystart ;
-        ystart = (ystart>nl - ybuffer-1) ? nl - ybuffer-1 : ystart ; 
+        ystart = (ystart>nl - ybuffer-1) ? nl - ybuffer-1 : ystart ;
 	XClearArea (xinfo_ptr->dpy, XtWindow (da_zm), 0, 0, 0, 0, True) ;
 
 
@@ -249,7 +249,7 @@ void  CDisp::expose_zm (Widget w, XtPointer xinfoeq, void *cbs)
 
 }
 
-void CDisp::click_dazm (Widget w, XtPointer xinfoeq, void *cbs) 
+void CDisp::click_dazm (Widget w, XtPointer xinfoeq, void *cbs)
 {
 	CDisp *cditmp = (CDisp *) xinfoeq ;
 	cditmp->click_zm (w, xinfoeq, cbs) ;

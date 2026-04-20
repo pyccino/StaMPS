@@ -1,14 +1,19 @@
 """Tests for python/stamps/_shell.py."""
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
 import pytest
-
 from stamps._shell import (
-    sorted_glob, rm_rf_glob, append_glob, mkdir_if_missing,
-    write_text_lf, write_text_for_cpp, long_path,
+    append_glob,
+    long_path,
+    mkdir_if_missing,
+    rm_rf_glob,
+    sorted_glob,
+    write_text_for_cpp,
+    write_text_lf,
 )
 
 

@@ -5,6 +5,7 @@ probes Windows-specific behaviors (registry, WSL detection, TLS 1.2
 default). On Linux/macOS the ``windows_only`` marker causes them to be
 skipped at collection time.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -23,7 +24,8 @@ def test_installer_dry_run_aborts_in_wsl(tmp_path, monkeypatch):
     monkeypatch.setenv("WSL_DISTRO_NAME", "Ubuntu")
     proc = subprocess.run(
         ["powershell", "-NoProfile", "-File", str(SCRIPT), "-DryRun"],
-        capture_output=True, cwd=tmp_path
+        capture_output=True,
+        cwd=tmp_path,
     )
     assert proc.returncode == 2
 

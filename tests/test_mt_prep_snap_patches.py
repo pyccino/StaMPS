@@ -2,9 +2,9 @@
 
 Covers Step 2 table 3 in the plan.
 """
+
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -17,9 +17,7 @@ def _touch(p: Path) -> Path:
     return p
 
 
-def _write_par(
-    path: Path, *, range_samples: int = 100, azimuth_lines: int = 200
-) -> Path:
+def _write_par(path: Path, *, range_samples: int = 100, azimuth_lines: int = 200) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"range_samples: {range_samples}\nazimuth_lines: {azimuth_lines}\n",
@@ -56,6 +54,7 @@ def _stamps_env(monkeypatch: pytest.MonkeyPatch, tmp_path_factory) -> None:
     monkeypatch.setenv("STAMPS", str(fake_stamps))
 
     from stamps import mt_prep_snap as _mod
+
     monkeypatch.setattr(_mod, "run_batch", lambda *a, **kw: 0)
 
     def _fake_run(cmd, *args, **kwargs):
@@ -74,6 +73,7 @@ def _stamps_env(monkeypatch: pytest.MonkeyPatch, tmp_path_factory) -> None:
 
     monkeypatch.setattr("stamps.mt_prep_snap.subprocess.run", _fake_run)
     from stamps import mt_extract_cands as _mec
+
     monkeypatch.setattr(_mec, "main", lambda argv=None: 0)
 
 
@@ -87,9 +87,7 @@ def test_patch_list_enumerates_in_range_major_order(tmp_workdir):
 
     d = _ps_fixture(tmp_workdir, width=1000, length=2000)
     main(["20200101", str(d), "0.4", "2", "2", "0", "0"])
-    lines = [
-        ln for ln in (tmp_workdir / "patch.list").read_text().splitlines() if ln
-    ]
+    lines = [ln for ln in (tmp_workdir / "patch.list").read_text().splitlines() if ln]
     # irg-major, iaz-minor:
     # irg=1,iaz=1 → PATCH_1 ; irg=1,iaz=2 → PATCH_2
     # irg=2,iaz=1 → PATCH_3 ; irg=2,iaz=2 → PATCH_4
@@ -156,8 +154,6 @@ def test_iaz_resets_between_irg_iterations(tmp_workdir):
     # width_p=500 length_p=1000 overlap=0.
     # Correct PATCH_3 (irg=2, iaz=1): start_rg1=501, end_rg1=1000, start_az1=1
     p3 = (tmp_workdir / "PATCH_3" / "patch.in").read_text().splitlines()
-    assert p3 == ["501", "1000", "1", "1000"], (
-        f"iaz was not reset before irg=2; got {p3}"
-    )
+    assert p3 == ["501", "1000", "1", "1000"], f"iaz was not reset before irg=2; got {p3}"
     p4 = (tmp_workdir / "PATCH_4" / "patch.in").read_text().splitlines()
     assert p4 == ["501", "1000", "1001", "2000"]

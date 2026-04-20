@@ -10,6 +10,7 @@ Preserves csh semantics line-for-line:
 * psclonlat.in uses `head -1` (FIRST sorted)
 * LF-only line endings across platforms
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,7 +30,6 @@ from ._shell import (
     write_text_for_cpp,
     write_text_lf,
 )
-
 
 AUTHOR = "Andy Hooper, August 2017"
 
@@ -107,21 +107,14 @@ def main(argv: list[str] | None = None) -> int:
         print("Small Baseline Processing")
         blank_line()
         # csh gawk 'END {print $1}' → LAST sorted match.
-        matches = sorted_glob(
-            args.datadir
-            / "SMALL_BASELINES"
-            / "*"
-            / f"{args.master}.*slc.par"
-        )
+        matches = sorted_glob(args.datadir / "SMALL_BASELINES" / "*" / f"{args.master}.*slc.par")
         if not matches:
             print(f"No RSC for master {args.master}", file=sys.stderr)
             sys.exit(3)
         rsc = matches[-1]
         print(rsc)
     else:
-        matches = sorted_glob(
-            args.datadir / "*slc" / f"{args.master}.*slc.par"
-        )
+        matches = sorted_glob(args.datadir / "*slc" / f"{args.master}.*slc.par")
         if not matches:
             print(f"No RSC for master {args.master}", file=sys.stderr)
             sys.exit(3)
@@ -130,10 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.da_thresh is None:
         args.da_thresh = "0.6" if sb_flag else "0.4"
     print(f"Amplitude Dispersion Threshold: {args.da_thresh}")
-    print(
-        f"Processing {args.prg} patch(es) in range and "
-        f"{args.paz} in azimuth"
-    )
+    print(f"Processing {args.prg} patch(es) in range and " f"{args.paz} in azimuth")
     blank_line()
 
     par = parse_par(rsc)
@@ -143,12 +133,8 @@ def main(argv: list[str] | None = None) -> int:
     write_text_lf(workdir / "processor.txt", "snap\n")
 
     stamps_dir = stamps_root()
-    script = stamps_dir / "matlab" / (
-        "sb_parms_initial.m" if sb_flag else "ps_parms_initial.m"
-    )
-    log = workdir / (
-        "sb_parms_initial.log" if sb_flag else "ps_parms_initial.log"
-    )
+    script = stamps_dir / "matlab" / ("sb_parms_initial.m" if sb_flag else "ps_parms_initial.m")
+    log = workdir / ("sb_parms_initial.log" if sb_flag else "ps_parms_initial.log")
     run_batch(script, log)
 
     write_text_lf(workdir / "width.txt", f"{width}\n")

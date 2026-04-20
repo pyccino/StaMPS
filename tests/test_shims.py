@@ -1,6 +1,5 @@
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -25,7 +24,9 @@ def test_bash_shim_passes_args_through(stamps_root: Path):
     shim = stamps_root / "bin" / "mt_prep_snap"
     # Call with no args -> should exit 4 (usage)
     proc = subprocess.run(
-        [str(shim)], capture_output=True, timeout=10,
+        [str(shim)],
+        capture_output=True,
+        timeout=10,
         env=_shim_env(stamps_root),
     )
     assert proc.returncode == 4
@@ -46,9 +47,7 @@ def test_bat_shim_preserves_quoted_arg_with_spaces(stamps_root: Path, tmp_path: 
     data = tmp_path / "my data"
     data.mkdir()
     # Call with master + datadir-with-space; we only check argv passthrough.
-    proc = subprocess.run(
-        [str(shim), "20200101", str(data)],
-        capture_output=True, timeout=30)
+    proc = subprocess.run([str(shim), "20200101", str(data)], capture_output=True, timeout=30)
     # May exit nonzero (empty datadir), but must NOT fail with 9009 "not found"
     assert proc.returncode != 9009
 

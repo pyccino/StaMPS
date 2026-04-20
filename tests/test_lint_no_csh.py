@@ -1,4 +1,5 @@
 """Static lint: ensure no new csh idioms or bare system() calls sneak in."""
+
 import re
 from pathlib import Path
 
@@ -6,20 +7,30 @@ import pytest
 
 FORBIDDEN_IN_MATLAB = [
     (re.compile(r"system\('which\s"), "use sp_which instead of system('which ...')"),
-    (re.compile(r"system\('\\ls"),     "use dir() instead of system('\\ls ...')"),
-    (re.compile(r"system\('\\rm"),     "use delete() instead of system('\\rm ...')"),
-    (re.compile(r"system\('cp\s"),     "use copyfile() instead of system('cp ...')"),
-    (re.compile(r"!sync"),             "use sp_sync() instead of !sync"),
-    (re.compile(r">\s*/dev/null"),     "use sp_system() which rewrites /dev/null"),
+    (re.compile(r"system\('\\ls"), "use dir() instead of system('\\ls ...')"),
+    (re.compile(r"system\('\\rm"), "use delete() instead of system('\\rm ...')"),
+    (re.compile(r"system\('cp\s"), "use copyfile() instead of system('cp ...')"),
+    (re.compile(r"!sync"), "use sp_sync() instead of !sync"),
+    (re.compile(r">\s*/dev/null"), "use sp_system() which rewrites /dev/null"),
 ]
 
 
 def test_no_csh_idioms_in_patched_m_files(stamps_root: Path):
     patched_files = [
-        "uw_interp", "ps_smooth_scla", "ps_scn_filt", "ps_scn_filt_krig",
-        "ps_weed", "sb_baseline_plot", "mt_prep_suggestion", "batchjob",
-        "stamps_mc_header", "ps_sb_merge", "ps_calc_scla", "combine_amp_dem",
-        "ps_load_initial", "sb_load_initial",
+        "uw_interp",
+        "ps_smooth_scla",
+        "ps_scn_filt",
+        "ps_scn_filt_krig",
+        "ps_weed",
+        "sb_baseline_plot",
+        "mt_prep_suggestion",
+        "batchjob",
+        "stamps_mc_header",
+        "ps_sb_merge",
+        "ps_calc_scla",
+        "combine_amp_dem",
+        "ps_load_initial",
+        "sb_load_initial",
     ]
     violations = []
     for name in patched_files:
@@ -63,16 +74,22 @@ def test_no_csh_shebang_in_snap_path_bin(stamps_root: Path):
 # the patterns, these tests fire — they assert the lint correctly DETECTS
 # the patterns it claims to.
 
-@pytest.mark.parametrize("snippet,expected_message_fragment", [
-    ("foo = system('which matlab');",   "sp_which"),
-    ("system('\\ls *.par');",            "dir()"),
-    ("system('\\rm output.mat');",       "delete()"),
-    ("system('cp src dst');",            "copyfile()"),
-    ("!sync",                            "sp_sync()"),
-    ("system('echo > /dev/null');",      "sp_system"),
-])
+
+@pytest.mark.parametrize(
+    "snippet,expected_message_fragment",
+    [
+        ("foo = system('which matlab');", "sp_which"),
+        ("system('\\ls *.par');", "dir()"),
+        ("system('\\rm output.mat');", "delete()"),
+        ("system('cp src dst');", "copyfile()"),
+        ("!sync", "sp_sync()"),
+        ("system('echo > /dev/null');", "sp_system"),
+    ],
+)
 def test_lint_detects_forbidden_pattern(
-    snippet: str, expected_message_fragment: str, tmp_path: Path,
+    snippet: str,
+    expected_message_fragment: str,
+    tmp_path: Path,
 ):
     """For each FORBIDDEN_IN_MATLAB entry, prove the regex actually fires."""
     fired = False
@@ -121,6 +138,5 @@ def test_lint_negative_csh_shebang_detection(tmp_path: Path):
     # Mini-replica of the scanner; if the real one drifts, this stays honest.
     first = bad.read_text(encoding="utf-8", errors="replace").splitlines()[0]
     assert first.startswith("#!/bin/csh"), (
-        "Self-test scanner failed to detect csh shebang — "
-        "the real scanner would also miss it."
+        "Self-test scanner failed to detect csh shebang — " "the real scanner would also miss it."
     )

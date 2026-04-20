@@ -1,5 +1,5 @@
 #include "CDisp.h"
-#ifndef CDComp 
+#ifndef CDComp
 #define CDComp
 
 class CDispComp : public CDisp {
@@ -16,10 +16,10 @@ class CDispComp : public CDisp {
 		int StartDisp () ;
 
 		// overidden CDisp base functions
-		void expose_zm (Widget w, XtPointer xinfoeq, void *cbs) ;  
+		void expose_zm (Widget w, XtPointer xinfoeq, void *cbs) ;
 		static void expose_dazm (Widget w, XtPointer xinfoeq, void *cbs) ;
 
-		static void click_da (Widget w, XtPointer xinfoeq, void *cbs) ; 
+		static void click_da (Widget w, XtPointer xinfoeq, void *cbs) ;
 		void click (Widget w, XtPointer xinfoeq, void *cbs) ;
 } ;
 

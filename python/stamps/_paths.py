@@ -1,4 +1,5 @@
 """Environment + binary + shared-config resolution."""
+
 from __future__ import annotations
 
 import os
@@ -12,7 +13,8 @@ def stamps_root() -> Path:
     if not val:
         raise RuntimeError(
             "STAMPS environment variable is not set. Source "
-            "StaMPS_CONFIG.bash (Linux) or StaMPS_CONFIG.ps1 (Windows).")
+            "StaMPS_CONFIG.bash (Linux) or StaMPS_CONFIG.ps1 (Windows)."
+        )
     return Path(val)
 
 
@@ -27,7 +29,8 @@ def resolve_bin(name: str, platform: str | None = None) -> Path:
             return c
     raise FileNotFoundError(
         f"Cannot find StaMPS binary '{name}' in {binroot}. "
-        f"Run cmake --build or download the release .zip.")
+        f"Run cmake --build or download the release .zip."
+    )
 
 
 _COMMA_LOCALES = ("it_", "de_", "fr_", "es_", "pt_", "nl_", "ru_")
@@ -40,7 +43,8 @@ def check_locale() -> None:
             f"LC_NUMERIC={lc!r} uses comma as decimal separator. "
             "The Python port is locale-invariant, but some older MATLAB "
             "versions are not. See INSTALL.md for mitigations.",
-            stacklevel=2)
+            stacklevel=2,
+        )
 
 
 def shared_python_path() -> Path | None:
@@ -77,6 +81,7 @@ def check_python_coordination() -> None:
                 f"{shared} but StaMPS is running under {running}. "
                 f"Align via $env:STAMPS_PYTHON or re-run PHASE's "
                 f"setupPythonEnvironment.m.",
-                stacklevel=2)
+                stacklevel=2,
+            )
     except OSError:
         pass

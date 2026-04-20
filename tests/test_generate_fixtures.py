@@ -13,6 +13,7 @@ expected manifests with::
 
 and paste the resulting JSON into the constants below.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -83,8 +84,7 @@ def test_ps_fixture_sha256_manifest(tmp_path: Path) -> None:
     generate_ps_fixture(dest)
     actual = _sha256_tree(dest)
     assert actual == EXPECTED_PS, (
-        "PS fixture tree drifted from locked manifest; "
-        "investigate before regenerating goldens."
+        "PS fixture tree drifted from locked manifest; " "investigate before regenerating goldens."
     )
 
 
@@ -94,8 +94,7 @@ def test_sb_fixture_sha256_manifest(tmp_path: Path) -> None:
     generate_sb_fixture(dest)
     actual = _sha256_tree(dest)
     assert actual == EXPECTED_SB, (
-        "SB fixture tree drifted from locked manifest; "
-        "investigate before regenerating goldens."
+        "SB fixture tree drifted from locked manifest; " "investigate before regenerating goldens."
     )
 
 
@@ -123,6 +122,4 @@ def test_ps_raster_byte_sizes(tmp_path: Path) -> None:
     generate_ps_fixture(dest)
     for rel, expected_bytes in EXPECTED_SIZES_PS.items():
         actual = (dest / rel).stat().st_size
-        assert actual == expected_bytes, (
-            f"{rel}: {actual} B, expected {expected_bytes} B"
-        )
+        assert actual == expected_bytes, f"{rel}: {actual} B, expected {expected_bytes} B"

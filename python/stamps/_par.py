@@ -5,6 +5,7 @@ are parsed with Python's built-in int/float (locale-invariant). BOM is
 stripped; CRLF tolerated; first occurrence of duplicate key wins
 (matches csh backtick + word-split semantics).
 """
+
 from __future__ import annotations
 
 import re

@@ -7,13 +7,13 @@ The 18 tests below mirror Task 2b.2 in the Windows port plan:
 Binary-dispatch tests mock subprocess.run via monkeypatch so no actual
 C++ binary is invoked.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -32,10 +32,13 @@ def _setup_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return stamps_root
 
 
-def _make_workdir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-                  patches: list[str] | None = None,
-                  list_name: str = "patch.list",
-                  selsbc: bool = False) -> Path:
+def _make_workdir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    patches: list[str] | None = None,
+    list_name: str = "patch.list",
+    selsbc: bool = False,
+) -> Path:
     """Create a workdir under tmp_path with patch.list + patch dirs, cd into it."""
     workdir = tmp_path / "work"
     workdir.mkdir()
@@ -54,6 +57,7 @@ def _make_workdir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 def _spy_run(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Install a MagicMock for subprocess.run inside mt_extract_cands."""
     import stamps.mt_extract_cands as mec
+
     spy = MagicMock(return_value=MagicMock(returncode=0))
     monkeypatch.setattr(mec.subprocess, "run", spy)
     return spy
@@ -67,6 +71,7 @@ def _spy_run(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 def test_argc_zero_sets_all_four_flags_to_one(tmp_path, monkeypatch):
     """Test 37: argv=[] → dophase=dolonlat=dodem=docands=1 (csh L79-86)."""
     from stamps.mt_extract_cands import _parse_args
+
     args = _parse_args([])
     assert args["dophase"] == 1
     assert args["dolonlat"] == 1
@@ -77,6 +82,7 @@ def test_argc_zero_sets_all_four_flags_to_one(tmp_path, monkeypatch):
 def test_argc_one_sets_only_dophase(tmp_path, monkeypatch):
     """Test 38: argv=["1"] → dophase=1, others=0 (KEY PORTING BUG CATCH, csh L34-86)."""
     from stamps.mt_extract_cands import _parse_args
+
     args = _parse_args(["1"])
     assert args["dophase"] == 1
     assert args["dolonlat"] == 0
@@ -90,6 +96,7 @@ def test_explicit_zeros_disable_all(tmp_path, monkeypatch):
     _make_workdir(tmp_path, monkeypatch)
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     rc = main(["0", "0", "0", "0"])
     assert rc == 0
     assert spy.call_count == 0
@@ -98,6 +105,7 @@ def test_explicit_zeros_disable_all(tmp_path, monkeypatch):
 def test_precision_default_is_f(tmp_path, monkeypatch):
     """Test 40: no precision argv → f (csh L54-56)."""
     from stamps.mt_extract_cands import _parse_args
+
     args = _parse_args(["1", "0", "0", "1"])
     assert args["prec"] == "f"
 
@@ -108,6 +116,7 @@ def test_precision_s_passed_through(tmp_path, monkeypatch):
     _make_workdir(tmp_path, monkeypatch)
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "0", "0", "1", "s", "0"])
     assert spy.call_count == 1
     cmd = spy.call_args_list[0].args[0]
@@ -118,6 +127,7 @@ def test_precision_s_passed_through(tmp_path, monkeypatch):
 def test_byteswap_default_zero(tmp_path, monkeypatch):
     """Test 42: byteswap default = 0 (csh L59-62)."""
     from stamps.mt_extract_cands import _parse_args
+
     args = _parse_args(["1", "0", "0", "1", "f"])
     assert args["byteswap"] == 0
 
@@ -128,6 +138,7 @@ def test_byteswap_one_passed_through(tmp_path, monkeypatch):
     _make_workdir(tmp_path, monkeypatch)
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "0", "0", "1", "f", "1"])
     cmd = spy.call_args_list[0].args[0]
     assert "1" in cmd
@@ -139,6 +150,7 @@ def test_maskfile_empty_invokes_without_argv(tmp_path, monkeypatch):
     _make_workdir(tmp_path, monkeypatch)
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "0", "0", "1", "f", "0", ""])
     cmd = spy.call_args_list[0].args[0]
     # No empty string trailing argv
@@ -154,6 +166,7 @@ def test_maskfile_nonempty_prefixed_with_workdir(tmp_path, monkeypatch):
     workdir = _make_workdir(tmp_path, monkeypatch)
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "0", "0", "1", "f", "0", "mask.char"])
     cmd = spy.call_args_list[0].args[0]
     assert str(workdir / "mask.char") in cmd
@@ -165,6 +178,7 @@ def test_eight_args_uses_custom_patch_list(tmp_path, monkeypatch):
     _make_workdir(tmp_path, monkeypatch, list_name="my.list")
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     rc = main(["0", "0", "0", "1", "f", "0", "", "my.list"])
     assert rc == 0
     # default patch.list not present, so without honoring argv[7] we'd have crashed
@@ -179,6 +193,7 @@ def test_seven_args_still_uses_default_patch_list(tmp_path, monkeypatch):
     (workdir / "custom.list").write_text("PATCH_Z\n")
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     rc = main(["0", "0", "0", "1", "f", "0", ""])
     assert rc == 0
     # Confirm default patch.list was used (1 call for PATCH_1 present).
@@ -192,6 +207,7 @@ def test_missing_patch_list_is_fatal(tmp_path, monkeypatch):
     workdir.mkdir()
     monkeypatch.chdir(workdir)
     from stamps.mt_extract_cands import main
+
     with pytest.raises(FileNotFoundError):
         main([])
 
@@ -207,6 +223,7 @@ def test_selsbc_called_when_selsbc_in_exists(tmp_path, monkeypatch):
     _make_workdir(tmp_path, monkeypatch, selsbc=True)
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "0", "0", "1"])
     cmd = spy.call_args_list[0].args[0]
     assert cmd[0] == str(stamps_root / "bin" / "selsbc_patch")
@@ -218,6 +235,7 @@ def test_selpsc_called_otherwise(tmp_path, monkeypatch):
     _make_workdir(tmp_path, monkeypatch, selsbc=False)
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "0", "0", "1"])
     cmd = spy.call_args_list[0].args[0]
     assert cmd[0] == str(stamps_root / "bin" / "selpsc_patch")
@@ -232,6 +250,7 @@ def test_per_patch_cwd_kwarg_used(tmp_path, monkeypatch):
     (workdir / "pscdem.in").write_text("x\n")
     (workdir / "pscphase.in").write_text("x\n")
     import stamps.mt_extract_cands as mec
+
     spy = MagicMock(return_value=MagicMock(returncode=0))
     monkeypatch.setattr(mec.subprocess, "run", spy)
     # Also assert os.chdir is never called by the implementation:
@@ -262,6 +281,7 @@ def test_psclonlat_invoked_when_dolonlat(tmp_path, monkeypatch):
     (workdir / "psclonlat.in").write_text("x\n")
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "1", "0", "0"])
     assert spy.call_count == 1
     cmd = spy.call_args_list[0].args[0]
@@ -280,6 +300,7 @@ def test_pscdem_invoked_when_dodem(tmp_path, monkeypatch):
     (workdir / "pscdem.in").write_text("x\n")
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["0", "0", "1", "0"])
     assert spy.call_count == 1
     cmd = spy.call_args_list[0].args[0]
@@ -298,6 +319,7 @@ def test_pscphase_invoked_when_dophase(tmp_path, monkeypatch):
     (workdir / "pscphase.in").write_text("x\n")
     spy = _spy_run(monkeypatch)
     from stamps.mt_extract_cands import main
+
     main(["1", "0", "0", "0"])
     assert spy.call_count == 1
     cmd = spy.call_args_list[0].args[0]

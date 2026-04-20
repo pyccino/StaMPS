@@ -3,6 +3,7 @@
 Step 2 table 6. Each test declares a property that should hold for a
 large randomized input domain.
 """
+
 from __future__ import annotations
 
 import locale
@@ -11,8 +12,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from hypothesis import HealthCheck, assume, given, settings, strategies as st
-
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
 
 # ---------------------------------------------------------------------------
 # Lightweight fixture helpers.
@@ -25,9 +26,7 @@ def _touch(p: Path) -> Path:
     return p
 
 
-def _write_par(
-    path: Path, *, range_samples: int = 100, azimuth_lines: int = 200
-) -> Path:
+def _write_par(path: Path, *, range_samples: int = 100, azimuth_lines: int = 200) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"range_samples: {range_samples}\nazimuth_lines: {azimuth_lines}\n",
@@ -90,19 +89,21 @@ def test_par_locale_invariant_property(tmp_path_factory, loc):
         locale.setlocale(locale.LC_NUMERIC, "C")
 
 
-@given(names=st.lists(
-    st.text(
-        alphabet=st.characters(
-            whitelist_categories=("Lu", "Ll", "Nd"),
-            max_codepoint=0x7E,
+@given(
+    names=st.lists(
+        st.text(
+            alphabet=st.characters(
+                whitelist_categories=("Lu", "Ll", "Nd"),
+                max_codepoint=0x7E,
+            ),
+            min_size=1,
+            max_size=12,
         ),
-        min_size=1,
-        max_size=12,
-    ),
-    min_size=2,
-    max_size=16,
-    unique=True,
-))
+        min_size=2,
+        max_size=16,
+        unique=True,
+    )
+)
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None)
 def test_glob_sort_deterministic(tmp_path_factory, names):
     """sorted_glob returns identical ordering across calls."""

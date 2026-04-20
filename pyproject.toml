@@ -16,6 +16,14 @@ test = [
     "pytest-timeout>=2", # per-test timeouts for nightly E2E
 ]
 
+# Package discovery: the `stamps` package lives at python/stamps/, not at
+# the default `./stamps/` or `src/stamps/`. Tell setuptools where to look.
+[tool.setuptools]
+package-dir = {"" = "python"}
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
@@ -33,6 +41,11 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Legacy upstream Python 2 scripts under bin/ (tsx_dump_heading etc.)
+# pre-date the port and aren't in scope for lint/format. Also exclude
+# upstream DORIS/GAMMA/ERS scripts under bin/ that aren't Python at all
+# but have extension-less names — ruff tries to parse them otherwise.
+extend-exclude = ["bin/", "Manual/", "DORIS_SCR/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I", "UP"]

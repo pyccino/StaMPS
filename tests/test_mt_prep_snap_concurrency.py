@@ -2,6 +2,7 @@
 
 Step 2 table 5. Exercises the mkdir / rm -rf / cwd-restore edge cases.
 """
+
 from __future__ import annotations
 
 import os
@@ -19,9 +20,7 @@ def _touch(p: Path) -> Path:
     return p
 
 
-def _write_par(
-    path: Path, *, range_samples: int = 100, azimuth_lines: int = 200
-) -> Path:
+def _write_par(path: Path, *, range_samples: int = 100, azimuth_lines: int = 200) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"range_samples: {range_samples}\nazimuth_lines: {azimuth_lines}\n",
@@ -57,6 +56,7 @@ def _stub_env(monkeypatch, tmp_path_factory):
     monkeypatch.setenv("STAMPS", str(fake_stamps))
 
     from stamps import mt_prep_snap as _mod
+
     monkeypatch.setattr(_mod, "run_batch", lambda *a, **kw: 0)
 
     def _fake_run(cmd, *args, **kwargs):
@@ -75,6 +75,7 @@ def _stub_env(monkeypatch, tmp_path_factory):
 
     monkeypatch.setattr("stamps.mt_prep_snap.subprocess.run", _fake_run)
     from stamps import mt_extract_cands as _mec
+
     monkeypatch.setattr(_mec, "main", lambda argv=None: 0)
 
 
@@ -196,9 +197,7 @@ def test_rm_rf_glob_concurrent_with_append_glob(tmp_workdir):
             assert ln.endswith(".txt")
 
 
-def test_extract_cands_cwd_restore_on_interrupt(
-    tmp_workdir, monkeypatch, tmp_path_factory
-):
+def test_extract_cands_cwd_restore_on_interrupt(tmp_workdir, monkeypatch, tmp_path_factory):
     """KeyboardInterrupt mid-call → cwd restored via try/finally.
 
     Checks that stamps.mt_prep_snap does NOT leak cwd changes. The Python

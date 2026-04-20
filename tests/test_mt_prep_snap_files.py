@@ -2,15 +2,14 @@
 
 Covers the rows in Task 2b.1 Step 2 table 2.
 """
+
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Fixture helpers (duplicated from test_mt_prep_snap_cli.py on purpose —
@@ -24,9 +23,7 @@ def _touch(p: Path) -> Path:
     return p
 
 
-def _write_par(
-    path: Path, *, range_samples: int = 100, azimuth_lines: int = 200
-) -> Path:
+def _write_par(path: Path, *, range_samples: int = 100, azimuth_lines: int = 200) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"range_samples: {range_samples}\nazimuth_lines: {azimuth_lines}\n",
@@ -47,9 +44,7 @@ def _ps_fixture(
     d = root / "data"
     rslc = d / "rslc"
     _touch(rslc / f"{master}.rslc")
-    _write_par(
-        rslc / f"{master}.rslc.par", range_samples=width, azimuth_lines=length
-    )
+    _write_par(rslc / f"{master}.rslc.par", range_samples=width, azimuth_lines=length)
     for slv in extra_slcs:
         _touch(rslc / f"{slv}.rslc")
     geo = d / "geo"
@@ -72,7 +67,7 @@ def _sb_fixture(
 ) -> Path:
     d = root / "data"
     sb = d / "SMALL_BASELINES"
-    for i, slv in enumerate(pairs):
+    for _i, slv in enumerate(pairs):
         pairdir = sb / f"{master}_{slv}"
         _touch(pairdir / f"{master}.rslc")
         _touch(pairdir / f"{slv}.rslc")
@@ -106,6 +101,7 @@ def _stamps_env(monkeypatch: pytest.MonkeyPatch, tmp_path_factory) -> None:
     monkeypatch.setenv("STAMPS", str(fake_stamps))
 
     from stamps import mt_prep_snap as _mod
+
     monkeypatch.setattr(_mod, "run_batch", lambda *a, **kw: 0)
 
     def _fake_run(cmd, *args, **kwargs):
@@ -124,6 +120,7 @@ def _stamps_env(monkeypatch: pytest.MonkeyPatch, tmp_path_factory) -> None:
 
     monkeypatch.setattr("stamps.mt_prep_snap.subprocess.run", _fake_run)
     from stamps import mt_extract_cands as _mec
+
     monkeypatch.setattr(_mec, "main", lambda argv=None: 0)
 
 
@@ -174,9 +171,7 @@ def test_pscphase_in_header_then_diffs_ps(tmp_workdir):
         extra_diffs=("a_b", "c_d"),
     )
     main(["20200101", str(d)])
-    lines = (
-        (tmp_workdir / "pscphase.in").read_text(encoding="ascii").splitlines()
-    )
+    lines = (tmp_workdir / "pscphase.in").read_text(encoding="ascii").splitlines()
     assert lines[0] == "128"
     diffs = lines[1:]
     assert all(ln.endswith(".diff") for ln in diffs)
@@ -188,9 +183,7 @@ def test_pscphase_in_uses_sb_diffs_when_sb(tmp_workdir):
 
     d = _sb_fixture(tmp_workdir)
     main(["20200101", str(d)])
-    lines = (
-        (tmp_workdir / "pscphase.in").read_text(encoding="ascii").splitlines()
-    )
+    lines = (tmp_workdir / "pscphase.in").read_text(encoding="ascii").splitlines()
     diffs = [ln for ln in lines[1:] if ln]
     assert diffs, "expected at least one SB diff path"
     assert all("SMALL_BASELINES" in ln for ln in diffs)
@@ -201,9 +194,7 @@ def test_pscdem_in_has_width_and_dem_rdc(tmp_workdir):
 
     d = _ps_fixture(tmp_workdir, width=512)
     main(["20200101", str(d)])
-    lines = (
-        (tmp_workdir / "pscdem.in").read_text(encoding="ascii").splitlines()
-    )
+    lines = (tmp_workdir / "pscdem.in").read_text(encoding="ascii").splitlines()
     assert lines[0] == "512"
     # Exactly one dem.rdc line (may include trailing empty line).
     rdc_lines = [ln for ln in lines[1:] if ln.endswith("dem.rdc")]
@@ -219,9 +210,7 @@ def test_psclonlat_in_uses_head_1_not_end(tmp_workdir):
     (d / "geo" / "zzz.lon").touch()
     (d / "geo" / "zzz.lat").touch()
     main(["20200101", str(d)])
-    lines = (
-        (tmp_workdir / "psclonlat.in").read_text(encoding="ascii").splitlines()
-    )
+    lines = (tmp_workdir / "psclonlat.in").read_text(encoding="ascii").splitlines()
     assert len(lines) >= 3
     # First sorted .lon must be 20200101.lon, not zzz.lon.
     assert lines[1].endswith("20200101.lon")
@@ -268,9 +257,7 @@ def test_sb_rsc_is_last_sorted_not_first(tmp_workdir):
     assert "20200101_20200125" in rsc_line
 
 
-@pytest.mark.skipif(
-    sys.platform != "win32", reason="Windows-only LF guardrail"
-)
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only LF guardrail")
 def test_calamp_in_lf_on_windows(tmp_workdir):
     from stamps.mt_prep_snap import main
 

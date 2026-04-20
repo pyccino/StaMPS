@@ -6,6 +6,7 @@ against the csh source lines referenced in each row.
 Fixtures are built inline against `tmp_workdir` because the shared
 `generate_fixtures.py` is not produced until Task 2c.1.
 """
+
 from __future__ import annotations
 
 import locale
@@ -14,7 +15,6 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Synthetic-fixture helpers (lightweight; real rasters come from Task 2c.1).
@@ -27,9 +27,7 @@ def _touch(p: Path) -> Path:
     return p
 
 
-def _write_par(
-    path: Path, *, range_samples: int = 100, azimuth_lines: int = 200
-) -> Path:
+def _write_par(path: Path, *, range_samples: int = 100, azimuth_lines: int = 200) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"range_samples: {range_samples}\nazimuth_lines: {azimuth_lines}\n",
@@ -45,9 +43,7 @@ def _ps_fixture(
     d = root / "data"
     rslc = d / "rslc"
     _touch(rslc / f"{master}.rslc")
-    _write_par(
-        rslc / f"{master}.rslc.par", range_samples=width, azimuth_lines=length
-    )
+    _write_par(rslc / f"{master}.rslc.par", range_samples=width, azimuth_lines=length)
     geo = d / "geo"
     _touch(geo / f"{master}.lon")
     _touch(geo / f"{master}.lat")
@@ -65,9 +61,7 @@ def _sb_fixture(
     sb = d / "SMALL_BASELINES"
     pair = sb / f"{master}_20200115"
     _touch(pair / f"{master}.rslc")
-    _write_par(
-        pair / f"{master}.rslc.par", range_samples=width, azimuth_lines=length
-    )
+    _write_par(pair / f"{master}.rslc.par", range_samples=width, azimuth_lines=length)
     _touch(pair / "20200115.rslc")
     _touch(pair / f"{master}_20200115.diff")
     geo = d / "geo"
@@ -145,7 +139,7 @@ def test_too_few_args_exits_4(tmp_workdir):
 
 
 def test_usage_banner_matches_csh_verbatim(tmp_workdir, capsys):
-    from stamps.mt_prep_snap import main, USAGE
+    from stamps.mt_prep_snap import USAGE, main
 
     with pytest.raises(SystemExit):
         main([])
@@ -178,9 +172,7 @@ def test_default_da_thresh_ps_is_0_4(tmp_workdir):
 
     d = _ps_fixture(tmp_workdir)
     main(["20200101", str(d)])
-    first_line = (
-        (tmp_workdir / "selpsc.in").read_text(encoding="ascii").splitlines()[0]
-    )
+    first_line = (tmp_workdir / "selpsc.in").read_text(encoding="ascii").splitlines()[0]
     assert first_line == "0.4"
 
 
@@ -189,9 +181,7 @@ def test_default_da_thresh_sb_is_0_6(tmp_workdir):
 
     d = _sb_fixture(tmp_workdir)
     main(["20200101", str(d)])
-    first_line = (
-        (tmp_workdir / "selsbc.in").read_text(encoding="ascii").splitlines()[0]
-    )
+    first_line = (tmp_workdir / "selsbc.in").read_text(encoding="ascii").splitlines()[0]
     assert first_line == "0.6"
 
 
@@ -204,9 +194,7 @@ def test_explicit_da_thresh_overrides_default(tmp_workdir):
     assert content.splitlines()[0] == "0.35"
 
 
-def test_da_thresh_preserves_decimal_dot_in_comma_locale(
-    tmp_workdir, monkeypatch
-):
+def test_da_thresh_preserves_decimal_dot_in_comma_locale(tmp_workdir, monkeypatch):
     from stamps.mt_prep_snap import main
 
     # Attempt Italian locale; if unavailable, just ensure the Python port

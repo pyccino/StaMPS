@@ -5,6 +5,7 @@ works identically on Linux, macOS, and Windows. Includes \\\\?\\ long-path
 support on Windows, ANSI-code-page encoding for files consumed by C++
 narrow-API ifstream.
 """
+
 from __future__ import annotations
 
 import glob as _glob
@@ -28,8 +29,7 @@ def sorted_glob(pattern: Path | str) -> list[Path]:
     return sorted((Path(m) for m in matches), key=lambda p: os.fsencode(str(p)))
 
 
-def rm_rf_glob(pattern: Path | str, retries: int = 3,
-               backoff_s: float = 0.1) -> None:
+def rm_rf_glob(pattern: Path | str, retries: int = 3, backoff_s: float = 0.1) -> None:
     """Delete every path matching pattern, files or directories.
 
     Refuses to act on shallow patterns (< 3 path components resolved from
@@ -62,8 +62,7 @@ def rm_rf_glob(pattern: Path | str, retries: int = 3,
     except (OSError, RuntimeError):
         resolved_parts = raw_parts
     if len(raw_parts) < 3 or len(resolved_parts) < 3:
-        raise ValueError(
-            f"refusing to rm_rf_glob at shallow path (depth<3): {base}")
+        raise ValueError(f"refusing to rm_rf_glob at shallow path (depth<3): {base}")
 
     for victim in sorted_glob(p):
         for attempt in range(retries):
@@ -79,8 +78,7 @@ def rm_rf_glob(pattern: Path | str, retries: int = 3,
                 time.sleep(backoff_s)
 
 
-def mkdir_if_missing(d: Path | str, retries: int = 3,
-                     backoff_s: float = 0.1) -> None:
+def mkdir_if_missing(d: Path | str, retries: int = 3, backoff_s: float = 0.1) -> None:
     """Create directory if missing. Idempotent. Retries on PermissionError."""
     p = long_path(Path(d))
     for attempt in range(retries):
@@ -144,20 +142,17 @@ def write_text_for_cpp(path: Path | str, content: str) -> None:
     """
     encoding = locale.getpreferredencoding(False) if os.name == "nt" else "utf-8"
     normalized = content.replace("\r\n", "\n")
-    _write_bytes_with_retry(Path(path),
-                            normalized.encode(encoding, errors="replace"))
+    _write_bytes_with_retry(Path(path), normalized.encode(encoding, errors="replace"))
 
 
-def append_glob(out_path: Path | str, pattern: Path | str,
-                preamble: str | None = None) -> None:
+def append_glob(out_path: Path | str, pattern: Path | str, preamble: str | None = None) -> None:
     """Append sorted glob matches (one per line, LF) to out_path."""
     out = long_path(Path(out_path))
     existing = out.read_bytes() if out.exists() else b""
     body_lines = [str(p) for p in sorted_glob(pattern)]
     body = ("\n".join(body_lines) + "\n") if body_lines else ""
     if preamble is not None and not existing:
-        _write_bytes_with_retry(out,
-            (preamble.rstrip("\n") + "\n" + body).encode("ascii"))
+        _write_bytes_with_retry(out, (preamble.rstrip("\n") + "\n" + body).encode("ascii"))
     else:
         _write_bytes_with_retry(out, existing + body.encode("ascii"))
 

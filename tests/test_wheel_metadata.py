@@ -1,4 +1,5 @@
 """Wheel build smoke: verify pyproject metadata produces a sensible wheel."""
+
 import importlib.util
 import subprocess
 import sys
@@ -15,12 +16,18 @@ def test_wheel_builds_in_temp_dir(tmp_path: Path) -> None:
     `build`, which ships via `[build-system].requires` only. The
     dedicated `wheel-build-smoke` job installs `build` explicitly.
     """
-    if importlib.util.find_spec("build") is None:
-        pytest.skip("'build' package not installed (dedicated wheel CI job handles this)")
+    # find_spec("build") alone gives a false positive: CMake creates a
+    # `build/` directory which PEP 420 treats as a namespace package
+    # without the real `build` PyPI package being installed. Verify the
+    # runnable CLI entry point `build.__main__` exists — that's what
+    # `python -m build` actually executes.
+    if importlib.util.find_spec("build.__main__") is None:
+        pytest.skip("'build' PyPI package not installed (dedicated wheel CI job handles this)")
     repo_root = Path(__file__).resolve().parent.parent
     proc = subprocess.run(
         [sys.executable, "-m", "build", "--outdir", str(tmp_path)],
-        cwd=repo_root, capture_output=True,
+        cwd=repo_root,
+        capture_output=True,
     )
     assert proc.returncode == 0, proc.stderr.decode(errors="replace")
     wheels = list(tmp_path.glob("*.whl"))

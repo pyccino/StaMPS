@@ -5,7 +5,7 @@
 
 using namespace std;
 
-CDispComp::CDispComp(Widget w, char *ifile, XInfo *xi) : CDisp(w, ifile, xi) 
+CDispComp::CDispComp(Widget w, char *ifile, XInfo *xi) : CDisp(w, ifile, xi)
 {
 	// the rg file is the famous Zebker amp file
 	phase = NULL ;
@@ -14,9 +14,9 @@ CDispComp::CDispComp(Widget w, char *ifile, XInfo *xi) : CDisp(w, ifile, xi)
 	DispArr = 2 ;
 }
 
-int CDispComp::LoadArrays (unsigned char *mg, unsigned char *ph, int nsamps, int nlines) 
+int CDispComp::LoadArrays (unsigned char *mg, unsigned char *ph, int nsamps, int nlines)
 {
-	// phase runs from -PI to PI, we map this from 0 to 255 
+	// phase runs from -PI to PI, we map this from 0 to 255
 	// this function creates the arrays which are used to create the ximage arrays
 	int 	i, j, phval  ;
 	float 	ival ;
@@ -28,7 +28,7 @@ int CDispComp::LoadArrays (unsigned char *mg, unsigned char *ph, int nsamps, int
 
 	PI = atan (1.) * 4. ;
 	PI2 = atan (1.) * 2. ;
-	
+
 	// assign values to the phase:
 	for (i=0; i<120; i++)
 	{
@@ -41,7 +41,7 @@ int CDispComp::LoadArrays (unsigned char *mg, unsigned char *ph, int nsamps, int
 	 	ival = i - 120. ;
 		red [i] = 255. ;
 		grn [i] = float (ival) *  2.13 * 155./255. + 100. ;
-		blue [i] = float (239. - i) * 2.13 * 155./ 255. + 100. ; 
+		blue [i] = float (239. - i) * 2.13 * 155./ 255. + 100. ;
 	}
 	for (i=240; i<360; i++)
 	{
@@ -57,15 +57,15 @@ int CDispComp::LoadArrays (unsigned char *mg, unsigned char *ph, int nsamps, int
 	ximage_phase = XCreateImage (xinfo_ptr->dpy, xinfo_ptr->visual,
                 xinfo_ptr->depth,
                 ZPixmap, 0,
-                (char *) phase, ns, nl, 8, ns * 3) ; 
+                (char *) phase, ns, nl, 8, ns * 3) ;
 	ximage_mag = XCreateImage (xinfo_ptr->dpy, xinfo_ptr->visual,
                 xinfo_ptr->depth,
                 ZPixmap, 0,
-                (char *) mag, ns, nl, 8, ns * 3) ; 
+                (char *) mag, ns, nl, 8, ns * 3) ;
 	ximage_both = XCreateImage (xinfo_ptr->dpy, xinfo_ptr->visual,
                 xinfo_ptr->depth,
                 ZPixmap, 0,
-                (char *) both, ns, nl, 8, ns * 3) ; 
+                (char *) both, ns, nl, 8, ns * 3) ;
 	ximage_phase->bits_per_pixel=24 ;
 	ximage_mag->bits_per_pixel=24 ;
 	ximage_both->bits_per_pixel=24 ;
@@ -105,10 +105,10 @@ int CDispComp::LoadArrays (unsigned char *mg, unsigned char *ph, int nsamps, int
 	}
 	return (1) ;
 }
-			
-int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, int nlines) 
+
+int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, int nlines)
 {
-	// phase runs from -PI to PI, we map this from 0 to 255 
+	// phase runs from -PI to PI, we map this from 0 to 255
 	// this function creates the arrays which are used to create the ximage arrays
 	int 	i, j, phval  ;
 	float 	ival ;
@@ -121,7 +121,7 @@ int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, in
 
 	PI = atan (1.) * 4. ;
 	PI2 = atan (1.) * 2. ;
-	
+
 	// assign values to the phase:
 	for (i=0; i<120; i++)
 	{
@@ -134,7 +134,7 @@ int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, in
 	 	ival = i - 120. ;
 		red [i] = 255. ;
 		grn [i] = float (ival) *  2.13 * 155./255. + 100. ;
-		blue [i] = float (239. - i) * 2.13 * 155./ 255. + 100. ; 
+		blue [i] = float (239. - i) * 2.13 * 155./ 255. + 100. ;
 	}
 	for (i=240; i<360; i++)
 	{
@@ -145,7 +145,7 @@ int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, in
 	}
 
 	//test arrays of color
-        //Of = fopen("rgbtable.txt","w") ; 
+        //Of = fopen("rgbtable.txt","w") ;
         //if (Of == NULL){
         //    fprintf(stderr, "file open problem!\n");
         //    return(1);
@@ -196,7 +196,7 @@ int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, in
 	}
 
 	//write to disk
-        Of = fopen("dismph.dat","w") ; 
+        Of = fopen("dismph.dat","w") ;
         if (Of == NULL){
             fprintf(stderr, "file open problem!\n");
             return(1);
@@ -204,7 +204,7 @@ int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, in
         fwrite((char *)both, sizeof(char), nl*ns*3, Of) ;
 	fclose(Of);
 
-        Of = fopen("dismph.ppm","w") ; 
+        Of = fopen("dismph.ppm","w") ;
         if (Of == NULL){
             fprintf(stderr, "file open problem!\n");
             return(1);
@@ -217,25 +217,25 @@ int CDispComp::WriteArrays (unsigned char *mg, unsigned char *ph, int nsamps, in
 
 	return (1) ;
 }
-			
- 
-int CDispComp::StartDisp() 
+
+
+int CDispComp::StartDisp()
 {
 	int samps ;
 	int lines ;
- 
 
- 
+
+
         samps = ns ;
         lines = nl ;
         XtVaSetValues (da, XmNwidth, samps, XmNheight, lines, NULL) ;
 	if (pmap) XFreePixmap (xinfo_ptr->dpy, pmap) ;
         pmap = XCreatePixmap (xinfo_ptr->dpy, xinfo_ptr->rootwin, samps, lines, 24) ;
         XPutImage (xinfo_ptr->dpy, pmap, xinfo_ptr->imgGC, ximage_both, 0, 0, 0, 0, samps, lines) ;
- 
+
         return (1) ;
-}   
-		
+}
+
 
 CDispComp::~CDispComp () {
 	XDestroyImage (ximage_phase) ;
@@ -259,13 +259,13 @@ void  CDispComp::expose_zm (Widget w, XtPointer xinfoeq, void *cbs)
         int     ib, i, j, izm, jzm ;
         long    isamploc, osamploc ;
         XImage  *ximage_zm ;
- 
+
         // using the zoom factor, the start coords, and the zoom window size
         XtVaGetValues (da_zm, XmNwidth, &zm_samps, XmNheight, &zm_lines, NULL) ;
         int fr_samps = zm_samps / zm_fac ;
         int fr_lines = zm_lines / zm_fac ;
- 
- 
+
+
         // allocate the memory for the data array to hold the zoomed memory
 	if (DispArr == 0) inarr = phase ;
 	if (DispArr == 1) inarr = mag ;
@@ -300,8 +300,8 @@ void  CDispComp::expose_zm (Widget w, XtPointer xinfoeq, void *cbs)
         XCopyArea (xinfo_ptr->dpy, pmap_zm, XtWindow (w), xinfo_ptr->imgGC,
                0, 0, zm_samps, zm_lines, 0, 0) ;
         XDestroyImage (ximage_zm) ;
- 
-}                
+
+}
 
 void  CDispComp::click (Widget w, XtPointer xinfoeq, void *cbs)
 {
@@ -320,25 +320,25 @@ void  CDispComp::click (Widget w, XtPointer xinfoeq, void *cbs)
 
 	if (event->xany.type==ButtonPress) return ;
 	if (event->xbutton.button==3) {
-		DispArr++ ; 
-		if (DispArr > 2) DispArr = 0 ; 
+		DispArr++ ;
+		if (DispArr > 2) DispArr = 0 ;
 		switch (DispArr) {
 		    case 0 :
 			XPutImage (xinfo_ptr->dpy, pmap, xinfo_ptr->imgGC, ximage_phase, 0, 0, 0, 0,
-                		samps, lines) ; 
+                		samps, lines) ;
 			break ;
 		    case 1 :
 			XPutImage (xinfo_ptr->dpy, pmap, xinfo_ptr->imgGC, ximage_mag, 0, 0, 0, 0,
-                		samps, lines) ; 
+                		samps, lines) ;
 			break ;
 		    case 2 :
 			XPutImage (xinfo_ptr->dpy, pmap, xinfo_ptr->imgGC, ximage_both, 0, 0, 0, 0,
-                		samps, lines) ; 
+                		samps, lines) ;
 			break ;
 		}
         	XClearArea (xinfo_ptr->dpy, XtWindow (da), 0, 0, 0, 0, True) ;
 	}
- 
+
 	cout << "xloc  yloc : " << xloc << "  " << yloc << endl ;
         sprintf (cursbuf, "X :   %5d      Y :    %5d", xloc, yloc) ;
         XmTextSetString (xinfo_ptr->curswin, cursbuf) ;
@@ -350,25 +350,25 @@ void  CDispComp::click (Widget w, XtPointer xinfoeq, void *cbs)
         xstart = (xstart<0) ? 0:xstart ;
         xstart = (xstart>ns - xbuffer-1) ? ns - xbuffer-1 : xstart ;
         ystart = (ystart<0) ? 0:ystart ;
-        ystart = (ystart>nl - ybuffer-1) ? nl - ybuffer-1 : ystart ; 
+        ystart = (ystart>nl - ybuffer-1) ? nl - ybuffer-1 : ystart ;
         XClearArea (xinfo_ptr->dpy, XtWindow (da_zm), 0, 0, 0, 0, True) ;
 
-	 
- 
-}    
- 
+
+
+}
+
 void CDispComp::click_da (Widget w, XtPointer xinfoeq, void *cbs)
 {
         CDispComp *thisptr = (CDispComp *) xinfoeq ;
         thisptr->click (w, xinfoeq, cbs) ;
-}             
+}
 
 void CDispComp::expose_dazm (Widget w, XtPointer xinfoeq, void *cbs)
 {
         CDispComp *thisptr = (CDispComp *) xinfoeq ;
         thisptr->expose_zm (w, xinfoeq, cbs) ;
 }
- 
+
 /*
 void CDisp::expose_da (Widget w, XtPointer xinfoeq, void *cbs)
 {

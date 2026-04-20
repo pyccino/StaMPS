@@ -2,6 +2,7 @@
 
 Nightly-tier (8-12 min wall-clock). Requires MATLAB license in CI.
 """
+
 from __future__ import annotations
 
 import os
@@ -25,9 +26,10 @@ def test_e2e_ps_pipeline(tmp_path: Path, stamps_root: Path):
     shim_name = "mt_prep_snap.bat" if os.name == "nt" else "mt_prep_snap"
     shim = stamps_root / "bin" / shim_name
     proc = subprocess.run(
-        [str(shim), "20200101", str(tmp_path / "data"),
-         "0.4", "1", "1", "50", "50"],
-        cwd=tmp_path, capture_output=True, timeout=300,
+        [str(shim), "20200101", str(tmp_path / "data"), "0.4", "1", "1", "50", "50"],
+        cwd=tmp_path,
+        capture_output=True,
+        timeout=300,
     )
     assert proc.returncode == 0, proc.stderr.decode(errors="replace")
 
@@ -37,14 +39,22 @@ def test_e2e_ps_pipeline(tmp_path: Path, stamps_root: Path):
 
     # 4. Run stamps(1,7) via _matlab helper
     from stamps._matlab import run_batch
+
     script = tmp_path / "run_stamps.m"
     script.write_text("stamps(1,7); exit(0);\n")
     rc = run_batch(script, tmp_path / "stamps.log")
     assert rc == 0, (tmp_path / "stamps.log").read_text(errors="replace")
 
     # 5. Expected .mat files
-    expected = ("ps2.mat", "rc2.mat", "pm2.mat", "select2.mat",
-                "weed2.mat", "phuw2.mat", "scla2.mat")
+    expected = (
+        "ps2.mat",
+        "rc2.mat",
+        "pm2.mat",
+        "select2.mat",
+        "weed2.mat",
+        "phuw2.mat",
+        "scla2.mat",
+    )
     for name in expected:
         assert (tmp_path / name).exists(), f"{name} not produced"
 

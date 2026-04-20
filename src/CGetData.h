@@ -2,7 +2,7 @@
 #include <fstream>
 #include <math.h>
 
-#ifndef CGD 
+#ifndef CGD
 #define CGD
 
 class CGetData {
@@ -24,7 +24,7 @@ class CGetData {
 	int DeleteMPH () ;
 	int DeleteHgt () ;
 	int DeleteRaw () ;
-	
+
 
 	// file parameters
 	char infile [240] ;
@@ -40,7 +40,7 @@ class CGetData {
 	int expflag ;
 	int dtype ;
 	float expval ;
-	
+
 	float scalered, scalegrn ;
 	inline double getmag (float re, float im) ;
 	inline void getmph (float re, float im, double * mg, double *ph) ;
@@ -56,6 +56,4 @@ inline void CGetData::getmph (float re, float im, double *mag, double *ph) {
 }
 
 
-#endif 
-
-
+#endif

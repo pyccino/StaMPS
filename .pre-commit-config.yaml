@@ -3,11 +3,11 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff
-        # Skip legacy upstream Python 2 scripts under bin/ (tsx_dump_heading,
-        # etc.) that pre-date the Windows port and aren't in scope for lint.
-        args: [--fix, "--extend-exclude=bin/"]
+        args: [--fix]
       - id: ruff-format
-        args: ["--extend-exclude=bin/"]
+    # Exclusions live in pyproject.toml [tool.ruff].extend-exclude so
+    # the `ruff` and `ruff format` invocations stay identical between
+    # CI and local dev (pre-commit autofetches the config from cwd).
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
@@ -19,9 +19,16 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # Upstream port-out-of-scope dirs are skipped for all whitespace hooks:
+      # DORIS/GAMMA/ERS scripts (bin/, DORIS_SCR/), LaTeX manual (Manual/),
+      # ROI_PAC Perl scripts, legacy .m files we didn't touch, and vendored
+      # Triangle source. Port-owned files (python/, tests/, matlab_compat/,
+      # .github/, top-level docs) are linted strictly.
       - id: trailing-whitespace
+        exclude: ^(bin/|DORIS_SCR/|Manual/|ROI_PAC_SCR/|matlab/|external/triangle/src/)
       - id: end-of-file-fixer
+        exclude: ^(bin/|DORIS_SCR/|Manual/|ROI_PAC_SCR/|matlab/|external/triangle/src/)
       - id: check-yaml
       - id: mixed-line-ending
         args: [--fix=lf]
-        exclude: ^(.*\.bat|.*\.cmd)$   # batch files need CRLF
+        exclude: ^(.*\.bat|.*\.cmd|bin/|DORIS_SCR/|Manual/|ROI_PAC_SCR/|matlab/|external/triangle/src/)

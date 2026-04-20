@@ -1,13 +1,12 @@
 """Binaries must emit C-locale floats regardless of user locale."""
+
 import os
 import subprocess
 from pathlib import Path
 
 import pytest
 
-
-BINARIES = ["calamp", "cpxsum", "pscphase", "pscdem",
-            "psclonlat", "selpsc_patch", "selsbc_patch"]
+BINARIES = ["calamp", "cpxsum", "pscphase", "pscdem", "psclonlat", "selpsc_patch", "selsbc_patch"]
 
 
 @pytest.mark.parametrize("name", BINARIES)
@@ -25,18 +24,17 @@ def test_binary_starts_under_italian_locale(name: str, bin_dir: Path):
     env = os.environ.copy()
     env.update({"LC_ALL": "it_IT.UTF-8", "LC_NUMERIC": "it_IT.UTF-8"})
     proc = subprocess.run([str(exe)], capture_output=True, timeout=5, env=env)
-    # No abort/segfault: returncode must be in [0, 255]. Negative values on
-    # POSIX indicate the process was killed by a signal.
-    assert 0 <= proc.returncode < 256, (
-        f"{name} aborted (returncode={proc.returncode}, "
-        f"likely SIGABRT/SIGSEGV)"
+    # No abort/segfault. POSIX: negative returncode means the process was
+    # killed by a signal — that's the real failure mode to catch. Windows:
+    # exit codes are 32-bit; the binary may exit with any non-negative
+    # integer. We reject only signal-terminated POSIX runs.
+    assert proc.returncode >= 0, (
+        f"{name} killed by signal (returncode={proc.returncode}, " f"likely SIGABRT/SIGSEGV)"
     )
     assert proc.stdout or proc.stderr, f"{name} produced no output"
 
 
-def test_calamp_output_uses_dot_decimal_under_italian_locale(
-    tmp_workdir: Path, bin_dir: Path
-):
+def test_calamp_output_uses_dot_decimal_under_italian_locale(tmp_workdir: Path, bin_dir: Path):
     """Calamp under Italian locale must NOT emit comma-decimal floats.
 
     Calamp's actual CLI: `calamp parmfile.in width parmfile.out precision
@@ -51,6 +49,7 @@ def test_calamp_output_uses_dot_decimal_under_italian_locale(
     """
     import re
     import struct
+
     exe = bin_dir / ("calamp.exe" if os.name == "nt" else "calamp")
     if not exe.exists():
         pytest.skip(f"{exe} not built yet")
@@ -62,12 +61,13 @@ def test_calamp_output_uses_dot_decimal_under_italian_locale(
     parmfile_in.write_bytes(f"{slc}\n".encode())
     parmfile_out = tmp_workdir / "calamp.out"
     env = os.environ.copy()
-    env.update({"LC_ALL": "it_IT.UTF-8", "LC_NUMERIC": "it_IT.UTF-8",
-                "LANG": "it_IT.UTF-8"})
+    env.update({"LC_ALL": "it_IT.UTF-8", "LC_NUMERIC": "it_IT.UTF-8", "LANG": "it_IT.UTF-8"})
     proc = subprocess.run(
-        [str(exe), str(parmfile_in), str(width),
-         str(parmfile_out), "s", "0"],
-        cwd=tmp_workdir, capture_output=True, timeout=10, env=env,
+        [str(exe), str(parmfile_in), str(width), str(parmfile_out), "s", "0"],
+        cwd=tmp_workdir,
+        capture_output=True,
+        timeout=10,
+        env=env,
     )
     # Calamp's exit code on a valid run is 0; a failed open is nonzero.
     # If the binary itself fails on this fixture for unrelated reasons

@@ -12,7 +12,7 @@ CDispComp *cdi ;
 CGetData *cdg ;
 
 
-int main (int argc, char *argv[]) 
+int main (int argc, char *argv[])
 {
 	char     infile [240] ;
 	int 	 status, ns=5120, nl=0, startl=0, flipflag=0, expflag=1;
@@ -25,7 +25,7 @@ int main (int argc, char *argv[])
 	argc--;
 	strcpy (infile, *++argv) ;
 	argc-- ;
-	if (argc) 
+	if (argc)
 	{
 		ns=atoi (*++argv) ;
 		argc-- ;
@@ -65,14 +65,14 @@ int main (int argc, char *argv[])
 }
 
 
- 
+
 void closeup_fb (Widget w, XtPointer client_data, XmAnyCallbackStruct *cbs)
 {
 	delete cdi ;
 	delete cdg ;
    	delete xinfo ;
-	exit (0) ;   
-     
-    
- 
-}      
+	exit (0) ;
+
+
+
+}

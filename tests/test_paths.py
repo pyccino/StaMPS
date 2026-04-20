@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import os
 import warnings
 from pathlib import Path
 
 import pytest
-
-from stamps._paths import stamps_root, resolve_bin, check_locale, shared_python_path
+from stamps._paths import check_locale, resolve_bin, shared_python_path, stamps_root
 
 
 def test_stamps_root_from_env(monkeypatch, tmp_path: Path):
@@ -60,8 +58,10 @@ def test_locale_silent_on_c(monkeypatch):
 
 def test_shared_python_path_from_appdata(monkeypatch, tmp_path: Path):
     """PHASE may write %APPDATA%\\PHASE\\python.txt; honor it."""
-    appdata = tmp_path / "AppData"; appdata.mkdir()
-    phase_dir = appdata / "PHASE"; phase_dir.mkdir()
+    appdata = tmp_path / "AppData"
+    appdata.mkdir()
+    phase_dir = appdata / "PHASE"
+    phase_dir.mkdir()
     (phase_dir / "python.txt").write_text("C:/Python311/python.exe")
     monkeypatch.setenv("APPDATA", str(appdata))
     assert shared_python_path() == Path("C:/Python311/python.exe")

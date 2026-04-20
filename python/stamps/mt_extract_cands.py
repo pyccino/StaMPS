@@ -1,4 +1,5 @@
 """Python port of bin/mt_extract_cands (csh)."""
+
 from __future__ import annotations
 
 import subprocess
@@ -9,14 +10,21 @@ from typing import Any
 from ._log import banner, blank_line
 from ._paths import resolve_bin
 
-
 AUTHOR = "Andy Hooper, Jan 2007"
 
 
 def _parse_args(argv: list[str]) -> dict[str, Any]:
     """Matches csh: argc==0 → all four flags = 1; argc≥1 → only args win, rest 0."""
-    defaults = {"dophase": 0, "dolonlat": 0, "dodem": 0, "docands": 0,
-                "prec": "f", "byteswap": 0, "maskfile": "", "list": "patch.list"}
+    defaults = {
+        "dophase": 0,
+        "dolonlat": 0,
+        "dodem": 0,
+        "docands": 0,
+        "prec": "f",
+        "byteswap": 0,
+        "maskfile": "",
+        "list": "patch.list",
+    }
     if not argv:
         return {**defaults, "dophase": 1, "dolonlat": 1, "dodem": 1, "docands": 1}
     if len(argv) == 8:
@@ -55,9 +63,16 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 sel = resolve_bin("selpsc_patch")
                 sel_in = workdir / "selpsc.in"
-            cmd = [str(sel), str(sel_in), "patch.in",
-                   "pscands.1.ij", "pscands.1.da", "mean_amp.flt",
-                   args["prec"], str(args["byteswap"])]
+            cmd = [
+                str(sel),
+                str(sel_in),
+                "patch.in",
+                "pscands.1.ij",
+                "pscands.1.da",
+                "mean_amp.flt",
+                args["prec"],
+                str(args["byteswap"]),
+            ]
             if args["maskfile"]:
                 cmd.append(str(workdir / args["maskfile"]))
             print(" ".join(cmd))
@@ -65,24 +80,39 @@ def main(argv: list[str] | None = None) -> int:
 
         if args["dolonlat"]:
             subprocess.run(
-                [str(resolve_bin("psclonlat")),
-                 str(workdir / "psclonlat.in"),
-                 "pscands.1.ij", "pscands.1.ll"],
-                cwd=patch_dir, check=False)
+                [
+                    str(resolve_bin("psclonlat")),
+                    str(workdir / "psclonlat.in"),
+                    "pscands.1.ij",
+                    "pscands.1.ll",
+                ],
+                cwd=patch_dir,
+                check=False,
+            )
 
         if args["dodem"]:
             subprocess.run(
-                [str(resolve_bin("pscdem")),
-                 str(workdir / "pscdem.in"),
-                 "pscands.1.ij", "pscands.1.hgt"],
-                cwd=patch_dir, check=False)
+                [
+                    str(resolve_bin("pscdem")),
+                    str(workdir / "pscdem.in"),
+                    "pscands.1.ij",
+                    "pscands.1.hgt",
+                ],
+                cwd=patch_dir,
+                check=False,
+            )
 
         if args["dophase"]:
             subprocess.run(
-                [str(resolve_bin("pscphase")),
-                 str(workdir / "pscphase.in"),
-                 "pscands.1.ij", "pscands.1.ph"],
-                cwd=patch_dir, check=False)
+                [
+                    str(resolve_bin("pscphase")),
+                    str(workdir / "pscphase.in"),
+                    "pscands.1.ij",
+                    "pscands.1.ph",
+                ],
+                cwd=patch_dir,
+                check=False,
+            )
 
     return 0
 

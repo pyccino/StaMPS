@@ -1,4 +1,5 @@
 """csh-compat banner + blank-line printing."""
+
 import os
 
 

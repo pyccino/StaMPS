@@ -8,7 +8,7 @@
 #define CD
 
 class CDisp {
-	public : 
+	public :
 		CDisp () ;
 		CDisp (Widget toplevel, char *dispfile, XInfo *xinfo_ptr) ;
 		virtual ~CDisp () ;
@@ -16,7 +16,7 @@ class CDisp {
 	Widget  sw ;
 	Widget  zoomshell, dispshell ;
 	Widget  da ;
-	Widget  da_zm ;	
+	Widget  da_zm ;
 	XImage  *ximage ;
 	XInfo   *xinfo_ptr ;
 	Pixmap  pmap, pmap_zm ;
@@ -28,10 +28,10 @@ class CDisp {
 
 	unsigned char *rgb ;
 
-	// functions for displaying 
+	// functions for displaying
 	int DispMono (int ns, int nl) ;
 
-	// callback functions 
+	// callback functions
 	static void expose_da (Widget w, XtPointer xinfoeq, void *cbs) ;
 	void expose (Widget w, XtPointer xinfoeq, void *cbs) ;
 
@@ -50,6 +50,6 @@ class CDisp {
 
 
 }
- 
+
 ;
-#endif 
+#endif

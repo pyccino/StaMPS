@@ -1,7 +1,7 @@
 """Every .cpp using int*_t types must include <cstdint> directly."""
+
 import re
 from pathlib import Path
-
 
 INT_TYPE_RE = re.compile(r"\b(u?int(8|16|32|64)_t)\b")
 

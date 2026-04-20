@@ -1,4 +1,5 @@
 """calamp.cpp must format calib_factor with explicit scientific/setprecision."""
+
 from pathlib import Path
 
 

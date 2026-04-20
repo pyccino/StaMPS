@@ -3,7 +3,7 @@
 # StaMPS - Stanford Method for Persistent Scatterers
 
 ## Description
-**StaMPS** is a software package that allows to extract ground displacements from time series of synthetic aperture radar (SAR) acquisitions. The package incorporates persistent scatterer and small baseline methods plus an option to combine both approaches. It is compatible with the **TRAIN** software and therefore allows to incorporate various tropospheric correction methods in the processing workflow. 
+**StaMPS** is a software package that allows to extract ground displacements from time series of synthetic aperture radar (SAR) acquisitions. The package incorporates persistent scatterer and small baseline methods plus an option to combine both approaches. It is compatible with the **TRAIN** software and therefore allows to incorporate various tropospheric correction methods in the processing workflow.
 
 ## Installation
 See the **StaMPS** manual for installation details and dependencies.
@@ -33,10 +33,10 @@ The original version was developed at Stanford University but subsequent develop
 ## Contributors
 - Andy Hooper (Lead)
 - David Bekaert
-- Karsten Spaans 
-- Ekbal Hussain 
-- Mahmut Arikan 
-- Anneleen Oyen 
+- Karsten Spaans
+- Ekbal Hussain
+- Mahmut Arikan
+- Anneleen Oyen
 - Miguel Caro Cuenca
 - Jose Manuel Delgado Blasco
 - *other commmunity members*

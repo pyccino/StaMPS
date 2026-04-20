@@ -1,11 +1,11 @@
 """Tests for python/stamps/_par.py."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
-
-from stamps._par import parse_par, ParError
+from stamps._par import ParError, parse_par
 
 
 def _write(path: Path, content: str, encoding: str = "utf-8") -> Path:
@@ -45,8 +45,7 @@ def test_crlf_line_endings(tmp_path: Path):
 
 
 def test_utf8_bom_stripped(tmp_path: Path):
-    f = _write(tmp_path / "t.par", "azimuth_lines: 1500\n",
-               encoding="utf-8-sig")
+    f = _write(tmp_path / "t.par", "azimuth_lines: 1500\n", encoding="utf-8-sig")
     assert parse_par(f)["azimuth_lines"] == 1500
 
 
@@ -78,8 +77,7 @@ def test_nonexistent_file_raises(tmp_path: Path):
 
 
 def test_duplicate_key_first_wins(tmp_path: Path):
-    f = _write(tmp_path / "t.par",
-               "azimuth_lines: 10\nazimuth_lines: 20\n")
+    f = _write(tmp_path / "t.par", "azimuth_lines: 10\nazimuth_lines: 20\n")
     assert parse_par(f)["azimuth_lines"] == 10
 
 

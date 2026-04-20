@@ -1,4 +1,5 @@
 """Cross-platform MATLAB batch invocation for the StaMPS Python port."""
+
 from __future__ import annotations
 
 import glob
@@ -41,14 +42,14 @@ def build_cmd(
     mode is one of: 'stdin' (Linux), 'batch' (Windows R2019a+), 'r' (fallback).
     """
     plat = platform or sys.platform
-    exe = str(matlab_exe) if matlab_exe else (
-        "matlab.exe" if plat == "win32" else "matlab")
+    exe = str(matlab_exe) if matlab_exe else ("matlab.exe" if plat == "win32" else "matlab")
 
     if plat == "win32":
         run_arg = _script_arg_for_run(script, plat)
         if fallback_r:
-            r_code = (f"try, run('{run_arg}'); catch e, "
-                      f"disp(getReport(e)); exit(1); end; exit(0);")
+            r_code = (
+                f"try, run('{run_arg}'); catch e, " f"disp(getReport(e)); exit(1); end; exit(0);"
+            )
             return [exe, "-wait", "-nosplash", "-nodesktop", "-r", r_code], "r"
         return [exe, "-batch", f"run('{run_arg}')"], "batch"
 
@@ -64,7 +65,7 @@ def _glob_program_files() -> list[Path]:
     for base in ("C:/Program Files/MATLAB", "C:/Program Files (x86)/MATLAB"):
         for p in glob.glob(f"{base}/R20*/bin/matlab.exe"):
             out.append(Path(p))
-    return sorted(out, reverse=True)   # newest first (lexical: R2025a > R2024b > R2024a)
+    return sorted(out, reverse=True)  # newest first (lexical: R2025a > R2024b > R2024a)
 
 
 def find_matlab_exe() -> Path:
@@ -82,7 +83,8 @@ def find_matlab_exe() -> Path:
             return candidate
     raise MatlabNotFoundError(
         "Cannot find 'matlab' on PATH. Set $MATLAB_EXE or install MATLAB "
-        "R2023a+. See INSTALL.md for Windows-specific instructions.")
+        "R2023a+. See INSTALL.md for Windows-specific instructions."
+    )
 
 
 def run_batch(
@@ -96,16 +98,14 @@ def run_batch(
     cmd, mode = build_cmd(script, log, matlab_exe=exe, fallback_r=fallback_r)
 
     if sys.platform == "win32":
-        print(f"Starting MATLAB (Windows cold start, ~10-15 s): {exe}",
-              file=sys.stderr)
+        print(f"Starting MATLAB (Windows cold start, ~10-15 s): {exe}", file=sys.stderr)
 
     with open(log, "wb") as log_fh:
         if mode == "stdin":
             with open(script, "rb") as script_fh:
                 proc = subprocess.run(
-                    cmd, stdin=script_fh, stdout=log_fh,
-                    stderr=subprocess.STDOUT, check=False)
+                    cmd, stdin=script_fh, stdout=log_fh, stderr=subprocess.STDOUT, check=False
+                )
         else:
-            proc = subprocess.run(
-                cmd, stdout=log_fh, stderr=subprocess.STDOUT, check=False)
+            proc = subprocess.run(cmd, stdout=log_fh, stderr=subprocess.STDOUT, check=False)
     return proc.returncode

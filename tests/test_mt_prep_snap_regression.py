@@ -3,6 +3,7 @@
 See Step 2 table 4 in the plan. Each test guards a patch that was made to
 the csh original; the Python port must not regress.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,9 +18,7 @@ def _touch(p: Path) -> Path:
     return p
 
 
-def _write_par(
-    path: Path, *, range_samples: int = 100, azimuth_lines: int = 200
-) -> Path:
+def _write_par(path: Path, *, range_samples: int = 100, azimuth_lines: int = 200) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"range_samples: {range_samples}\nazimuth_lines: {azimuth_lines}\n",
@@ -45,7 +44,11 @@ def _ps_fixture(
 
 
 def _sb_fixture(
-    root: Path, master: str = "20200101", *, width: int = 100, length: int = 200,
+    root: Path,
+    master: str = "20200101",
+    *,
+    width: int = 100,
+    length: int = 200,
     pairs: tuple[str, ...] = ("20200113", "20200125"),
 ) -> Path:
     d = root / "data"
@@ -54,8 +57,7 @@ def _sb_fixture(
         pairdir = sb / f"{master}_{slv}"
         _touch(pairdir / f"{master}.rslc")
         _touch(pairdir / f"{slv}.rslc")
-        _write_par(pairdir / f"{master}.rslc.par",
-                   range_samples=width, azimuth_lines=length)
+        _write_par(pairdir / f"{master}.rslc.par", range_samples=width, azimuth_lines=length)
         _touch(pairdir / f"{master}_{slv}.diff")
     geo = d / "geo"
     _touch(geo / f"{master}.lon")
@@ -76,6 +78,7 @@ def _stamps_env(monkeypatch: pytest.MonkeyPatch, tmp_path_factory) -> None:
     monkeypatch.setenv("STAMPS", str(fake_stamps))
 
     from stamps import mt_prep_snap as _mod
+
     monkeypatch.setattr(_mod, "run_batch", lambda *a, **kw: 0)
 
     captured: list[list[str]] = []
@@ -98,16 +101,16 @@ def _stamps_env(monkeypatch: pytest.MonkeyPatch, tmp_path_factory) -> None:
     monkeypatch.setattr("stamps.mt_prep_snap.subprocess.run", _fake_run)
     monkeypatch.setattr("stamps.mt_prep_snap._subprocess_calls", captured, raising=False)
     from stamps import mt_extract_cands as _mec
+
     monkeypatch.setattr(_mec, "main", lambda argv=None: 0)
     # Expose the calls list for tests that need to inspect it.
-    monkeypatch.setattr(
-        "stamps.mt_prep_snap.__test_calls__", captured, raising=False
-    )
+    monkeypatch.setattr("stamps.mt_prep_snap.__test_calls__", captured, raising=False)
 
 
 def _last_calamp_cmd() -> list[str]:
     """Helper: retrieve the calamp argv recorded by the autouse spy."""
     import stamps.mt_prep_snap as m
+
     calls = getattr(m, "__test_calls__", [])
     for c in calls:
         if "calamp" in Path(c[0]).name:
@@ -143,9 +146,7 @@ def test_short_and_byteswap_supported_for_sb(tmp_workdir):
     rc = main(["20200101", str(d)])
     assert rc == 0
     # selsbc.in header must be da_thresh=0.6 then width.
-    lines = (
-        (tmp_workdir / "selsbc.in").read_text(encoding="ascii").splitlines()
-    )
+    lines = (tmp_workdir / "selsbc.in").read_text(encoding="ascii").splitlines()
     assert lines[0] == "0.6"
     assert lines[1].isdigit()
 
@@ -164,9 +165,7 @@ def test_prep_snap_sb_rsc_uses_last_glob_match(tmp_workdir):
     """csh L104 `gawk 'END {print $1}'` selects the LAST sorted match."""
     from stamps.mt_prep_snap import main
 
-    d = _sb_fixture(
-        tmp_workdir, master="20200101", pairs=("20200113", "20200125")
-    )
+    d = _sb_fixture(tmp_workdir, master="20200101", pairs=("20200113", "20200125"))
     main(["20200101", str(d)])
     rsc = (tmp_workdir / "rsc.txt").read_text(encoding="ascii").strip()
     assert "20200101_20200125" in rsc
