@@ -34,14 +34,15 @@ ExternalProject_Add(snaphu
     BUILD_IN_SOURCE 1
     BUILD_COMMAND ${MAKE_EXECUTABLE} -C <SOURCE_DIR>/src
 
-    # Copy the produced binary + LICENSE + man page into INSTALL_DIR.
-    # Using CMake's portable copy primitives keeps this working on
-    # Linux, macOS, and MinGW without shell-dependent install targets.
+    # Copy the produced binary + README into INSTALL_DIR. On MinGW gcc
+    # adds a .exe extension, so copy the whole bin/ directory contents
+    # rather than a single filename — works on Linux/macOS (plain
+    # 'snaphu') and Windows-MinGW ('snaphu.exe') identically.
     INSTALL_COMMAND
         ${CMAKE_COMMAND} -E make_directory <INSTALL_DIR>/bin &&
-        ${CMAKE_COMMAND} -E copy
-            <SOURCE_DIR>/bin/snaphu
-            <INSTALL_DIR>/bin/snaphu &&
+        ${CMAKE_COMMAND} -E copy_directory
+            <SOURCE_DIR>/bin
+            <INSTALL_DIR>/bin &&
         ${CMAKE_COMMAND} -E copy
             <SOURCE_DIR>/README
             <INSTALL_DIR>/README
