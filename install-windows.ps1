@@ -79,7 +79,13 @@ $headers = @{}
 if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
 $proxyArgs = @{}
 if ($env:HTTPS_PROXY -or $env:HTTP_PROXY) {
-    $proxyArgs["Proxy"] = $env:HTTPS_PROXY ?? $env:HTTP_PROXY
+    # `??` (null-coalesce) is PowerShell 7+; this script declares
+    # #Requires -Version 5.1 so we use if-else instead.
+    if ($env:HTTPS_PROXY) {
+        $proxyArgs["Proxy"] = $env:HTTPS_PROXY
+    } else {
+        $proxyArgs["Proxy"] = $env:HTTP_PROXY
+    }
     $proxyArgs["ProxyUseDefaultCredentials"] = $true
 }
 $proxyArgs["MaximumRedirection"] = 2

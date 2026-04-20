@@ -132,7 +132,11 @@ def _sha256_tree(root: Path) -> dict:
     for p in sorted(root.rglob("*")):
         if p.is_file():
             h = hashlib.sha256(p.read_bytes()).hexdigest()
-            out[str(p.relative_to(root))] = h
+            # Use forward-slash POSIX keys so the manifest is
+            # cross-platform. str(WindowsPath) uses backslashes, which
+            # would make Windows keys diverge from Linux keys.
+            rel = p.relative_to(root).as_posix()
+            out[rel] = h
     return out
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,8 +21,13 @@ def test_escape_matlab_string_doubles_apostrophe():
 
 
 def test_build_cmd_linux_stdin():
+    # PurePosixPath pins forward-slash semantics regardless of host OS —
+    # Path() on Windows would produce backslashes and break the test.
     cmd, mode = build_cmd(
-        Path("/tmp/s.m"), Path("/tmp/s.log"), platform="linux", matlab_exe=Path("/usr/bin/matlab")
+        PurePosixPath("/tmp/s.m"),
+        PurePosixPath("/tmp/s.log"),
+        platform="linux",
+        matlab_exe=PurePosixPath("/usr/bin/matlab"),
     )
     assert cmd[0] == "/usr/bin/matlab"
     assert "-batch" not in cmd
@@ -31,19 +36,22 @@ def test_build_cmd_linux_stdin():
 
 def test_build_cmd_windows_batch():
     cmd, mode = build_cmd(
-        Path("C:/tmp/s.m"), Path("C:/tmp/s.log"), platform="win32", matlab_exe=Path("matlab.exe")
+        PureWindowsPath("C:/tmp/s.m"),
+        PureWindowsPath("C:/tmp/s.log"),
+        platform="win32",
+        matlab_exe=PureWindowsPath("matlab.exe"),
     )
     assert "-batch" in cmd
-    assert "run('C:/tmp/s.m')" in cmd[-1]
+    assert "run('C:/tmp/s.m')" in cmd[-1] or "run('C:\\tmp\\s.m')" in cmd[-1]
     assert mode == "batch"
 
 
 def test_build_cmd_windows_unc_preserved():
     cmd, _ = build_cmd(
-        Path(r"\\server\share\s.m"),
-        Path(r"\\server\share\s.log"),
+        PureWindowsPath(r"\\server\share\s.m"),
+        PureWindowsPath(r"\\server\share\s.log"),
         platform="win32",
-        matlab_exe=Path("matlab.exe"),
+        matlab_exe=PureWindowsPath("matlab.exe"),
     )
     # UNC should pass as \\server\share\s.m (backslashes preserved)
     assert r"\\server\share\s.m" in cmd[-1] or "//server/share/s.m" in cmd[-1]
@@ -51,10 +59,10 @@ def test_build_cmd_windows_unc_preserved():
 
 def test_build_cmd_windows_apostrophe_escaped():
     cmd, _ = build_cmd(
-        Path("C:/Bob's/s.m"),
-        Path("C:/Bob's/s.log"),
+        PureWindowsPath("C:/Bob's/s.m"),
+        PureWindowsPath("C:/Bob's/s.log"),
         platform="win32",
-        matlab_exe=Path("matlab.exe"),
+        matlab_exe=PureWindowsPath("matlab.exe"),
     )
     # Apostrophe in path must be doubled for MATLAB string literal
     assert "Bob''s" in cmd[-1]

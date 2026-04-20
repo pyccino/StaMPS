@@ -128,9 +128,14 @@ def test_path_with_spaces(tmp_path: Path):
 
 
 def test_long_path_prefix_windows(monkeypatch):
-    """On Windows paths > 240 chars get \\\\?\\ prefix; Linux unchanged."""
-    long_name = "a" * 260
-    p = Path(long_name)
+    """On Windows absolute paths > 240 chars get \\\\?\\ prefix; Linux unchanged."""
+    # long_path() only prefixes ABSOLUTE paths — relative paths can't use
+    # the \\\\?\\ prefix per Win32 semantics. Build an absolute path so the
+    # prefix rule actually fires.
+    if os.name == "nt":
+        p = Path("C:\\") / ("a" * 260)
+    else:
+        p = Path("/") / ("a" * 260)
     got = long_path(p)
     if os.name == "nt":
         assert str(got).startswith("\\\\?\\")
