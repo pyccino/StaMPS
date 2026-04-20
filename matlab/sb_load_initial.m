@@ -108,7 +108,7 @@ fid=fopen(phname,'r');
 if fid < 0
    error([phname,' cannot be openned'])
 end
-ph_bit=fread(fid,[1,1],'float');
+ph_bit=fread(fid,[1,1],'float',0,'ieee-le');
 float_bytes=ftell(fid);
 fseek(fid,0,1);
 nbytes=ftell(fid);
@@ -119,7 +119,7 @@ fseek(fid,0,-1);
 ph=zeros(n_ps,n_ifg,'single');
 byte_count=n_ps*2;
 for i=1:n_ifg
-    [ph_bit,byte_count]=fread(fid,[(n_ps)*2,1],'float');
+    [ph_bit,byte_count]=fread(fid,[(n_ps)*2,1],'float',0,'ieee-le');
     ph_bit=single(ph_bit);
     ph(:,i)=complex(ph_bit(1:2:end),ph_bit(2:2:end));
 end
@@ -136,7 +136,7 @@ fid=fopen(llname,'r');
 if fid < 0
    error([llname,' cannot be openned'])
 end
-lonlat=fread(fid,[2,inf],'float');
+lonlat=fread(fid,[2,inf],'float',0,'ieee-le');
 lonlat=lonlat';
 fclose(fid);
 if size(lonlat,1) ~= n_ps
@@ -203,7 +203,7 @@ if exist(hgtname,'file')
     if fid < 0
        error([hgtname,' cannot be openned'])
     end
-    hgt=fread(fid,[1,inf],'float');
+    hgt=fread(fid,[1,inf],'float',0,'ieee-le');
     hgt=hgt';
     fclose(fid);
     if size(hgt,1) ~= n_ps
