@@ -22,6 +22,18 @@ follows [Semantic Versioning](https://semver.org/).
   `skipif` boilerplate.
 
 ### Changed
+- **Behavior divergence — `mt_extract_cands`**: per-patch subprocess failures
+  are now collected and reported; process exits `1` if any patch failed
+  (was: silent continue per csh original). The legacy csh `foreach` loop
+  swallowed nonzero return codes from `selpsc_patch` / `selsbc_patch` /
+  `psclonlat` / `pscdem` / `pscphase`, masking partial-stack corruption
+  under a success exit. The Python port now prints a per-failure summary
+  to stderr (`<patch>: <binary> rc=<code>`) and exits `1` at the end of
+  the run. Users relying on the old silent-continue semantics will see
+  new `rc=1` where they previously saw `rc=0`; the per-patch work done is
+  unchanged. Missing patch directories are reported as synthetic rc=-1
+  instead of raising `FileNotFoundError`. `patch.list` parsing is hardened
+  to tolerate UTF-8 BOM (SNAP on Windows) and per-line trailing whitespace.
 - `NOTICE` — corrected snaphu license statement from BSD-3-Clause to
   Stanford permissive + CS2 noncommercial (the embedded CS2 minimum-
   cost-flow solver is IG Systems and requires a separate commercial
