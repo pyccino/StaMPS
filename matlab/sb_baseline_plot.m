@@ -31,11 +31,29 @@ dirs=strread(currdir,'%s','delimiter','/');
 
 if ~isempty(findstr(dirs{end},'SMALL_BASELINES'))
     
-    if strcmp(dirs{end},'SMALL_BASELINES') 
-        [a,b] = system(['\ls -d [1,2]* | sed ''' 's/_/ /''' ' > small_baselines.list']);
+    if strcmp(dirs{end},'SMALL_BASELINES')
+        entries = dir('[12]*');
+        entries = entries([entries.isdir]);
+        entries = entries(arrayfun(@(e) ~isempty(regexp(e.name,'_','once')), entries));
+        names = sort({entries.name});
+        fid = fopen('small_baselines.list', 'w');
+        for ii = 1:numel(names)
+            parts = regexp(names{ii}, '_', 'split');
+            fprintf(fid, '%s %s\n', parts{1}, parts{2});
+        end
+        fclose(fid);
     else
         cd ../SMALL_BASELINES
-        [a,b] = system(['\ls -d [1,2]* | sed ''' 's/_/ /''' ' > ' currdir filesep 'small_baselines.list']);
+        entries = dir('[12]*');
+        entries = entries([entries.isdir]);
+        entries = entries(arrayfun(@(e) ~isempty(regexp(e.name,'_','once')), entries));
+        names = sort({entries.name});
+        fid = fopen([currdir filesep 'small_baselines.list'], 'w');
+        for ii = 1:numel(names)
+            parts = regexp(names{ii}, '_', 'split');
+            fprintf(fid, '%s %s\n', parts{1}, parts{2});
+        end
+        fclose(fid);
         cd(currdir)
     end
     load ../psver
@@ -44,7 +62,16 @@ if ~isempty(findstr(dirs{end},'SMALL_BASELINES'))
  
 elseif strcmp(dirs{end},'MERGED') 
     cd ../SMALL_BASELINES
-    [a,b] = system(['\ls -d [1,2]* | sed ''' 's/_/ /''' ' > ../MERGED/small_baselines.list']);
+    entries = dir('[12]*');
+    entries = entries([entries.isdir]);
+    entries = entries(arrayfun(@(e) ~isempty(regexp(e.name,'_','once')), entries));
+    names = sort({entries.name});
+    fid = fopen('../MERGED/small_baselines.list', 'w');
+    for ii = 1:numel(names)
+        parts = regexp(names{ii}, '_', 'split');
+        fprintf(fid, '%s %s\n', parts{1}, parts{2});
+    end
+    fclose(fid);
     cd ../MERGED
     load ../psver
     psname=['../ps',num2str(psver)];

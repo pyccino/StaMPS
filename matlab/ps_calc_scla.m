@@ -79,8 +79,9 @@ end
 
 
 if use_small_baselines==0
-    evalcmd=['!rm -f ',meanvname,'.mat'];
-    eval(evalcmd)
+    if exist([meanvname,'.mat'],'file')
+        delete([meanvname,'.mat']);
+    end
 end
 
 ps=load(psname);

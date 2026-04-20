@@ -44,12 +44,12 @@ end
 %dem_format=fgetl(fid);
 %fclose(fid);
 
-!grep 'Number of lines (multilooked)' dem.out | gawk 'END {print $5}' > ml_length.txt
-ny=load('ml_length.txt');
-!grep 'Number of pixels (multilooked)' dem.out | gawk 'END {print $5}' > width.txt
-nx=load('width.txt');
-!grep 'Multilookfactor_azimuth_direction' dem.out | gawk 'END {print $2}' > mlaz.txt
-ar=load('mlaz.txt');
+ny = sp_parse_ifg_dims('dem.out', 'Number of lines (multilooked)');
+writematrix(ny, 'ml_length.txt');
+nx = sp_parse_ifg_dims('dem.out', 'Number of pixels (multilooked)');
+writematrix(nx, 'width.txt');
+ar = sp_parse_ifg_dims('dem.out', 'Multilookfactor_azimuth_direction');
+writematrix(ar, 'mlaz.txt');
 
 fid=fopen('dem_radar.raw'); 
 fseek(fid,0,1);
