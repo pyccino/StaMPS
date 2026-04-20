@@ -28,8 +28,10 @@ using namespace std;
 #include <cstdio>
 using namespace std;     
 
-#include <cstdlib>     
-using namespace std;     
+#include <cstdlib>
+using namespace std;
+
+#include <cstdint>
 
 // =======================================================================
 // Start of program 
@@ -122,9 +124,9 @@ try {
     }
 
     char header[32];
-    long magic=0x59a66a95;
+    int32_t magic=0x59a66a95;
     ifgfile[i].read(header,32);
-    if (*reinterpret_cast<long*>(header) == magic)
+    if (*reinterpret_cast<int32_t*>(header) == magic)
         cout << "sun raster file - skipping header\n";
     else ifgfile[i].seekg(ios::beg); 
 
