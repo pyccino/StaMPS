@@ -61,5 +61,17 @@ classdef test_sp_system < matlab.unittest.TestCase
                     sprintf('Expected literal /dev/null-file in output, got: %s', out));
             end
         end
+        function test_percent_literal_preserved_on_windows(tc)
+            % cmd.exe requires '%' to be doubled ('%%') in a command
+            % line for a literal percent sign to survive. A caret-escape
+            % ('^%') is NOT a documented cmd.exe escape and causes the
+            % percent to be dropped. Regression guard: a user echoing
+            % '100%' must see '100%' in stdout, not '100' or empty.
+            tc.assumeTrue(ispc);
+            [s, out] = sp_system('echo 100%');
+            tc.verifyEqual(s, 0);
+            tc.verifyTrue(contains(out, '100%'), ...
+                sprintf('Expected literal 100%% in stdout, got: %s', out));
+        end
     end
 end

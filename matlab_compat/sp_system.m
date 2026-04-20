@@ -16,13 +16,19 @@ function [status, out] = sp_system(cmd)
 %   with '\s>\s*/dev/null\b' rather than a bare substring.
 %
 %   cmd.exe special-character escaping (Windows only):
-%     Characters with syntactic meaning in cmd.exe (& | < > ^ ( ) %% !)
-%     are escaped with '^' BEFORE the /dev/null rewrites are applied, so
-%     that the redirection tokens injected by this function ('>NUL',
-%     '2>NUL', '>NUL 2>&1') are preserved verbatim. Callers who need a
-%     literal '>' inside an argument should pass it pre-escaped; we cannot
-%     disambiguate user redirections from user data without a full shell
-%     parser.
+%     Characters with syntactic meaning in cmd.exe (& | < > ^ ( ) !) are
+%     escaped with '^' BEFORE the /dev/null rewrites are applied, so that
+%     the redirection tokens injected by this function ('>NUL', '2>NUL',
+%     '>NUL 2>&1') are preserved verbatim. Callers who need a literal '>'
+%     inside an argument should pass it pre-escaped; we cannot disambiguate
+%     user redirections from user data without a full shell parser.
+%
+%     The '%%' character is handled separately: cmd.exe does NOT recognise
+%     '^%%' as an escape for a literal percent sign. Instead, a literal
+%     percent must be written as '%%%%' (doubling). We therefore apply the
+%     doubling pass LAST, after all caret-escapes and after the mask
+%     tokens have been restored, so the '>NUL' redirection tokens are not
+%     affected and existing carets do not get '%%'-doubled.
 %
 %   Errors (all on Windows and Unix):
 %     StaMPS:sp_system:invocationFailed - MATLAB's system() raised a runtime
@@ -52,7 +58,7 @@ function [status, out] = sp_system(cmd)
         % Escape metacharacters in remaining (user-supplied) operands.
         % Order matters: '^' must be escaped first so we do not double-
         % escape the carets we are about to add.
-        meta = {'^', '&', '|', '<', '>', '(', ')', '%', '!'};
+        meta = {'^', '&', '|', '<', '>', '(', ')', '!'};
         for k = 1:numel(meta)
             cmd = strrep(cmd, meta{k}, ['^' meta{k}]);
         end
@@ -60,6 +66,14 @@ function [status, out] = sp_system(cmd)
         cmd = strrep(cmd, MASK_FULL, '>NUL 2>&1');
         cmd = strrep(cmd, MASK_ERR,  '2>NUL');
         cmd = strrep(cmd, MASK_OUT,  '>NUL');
+        % Finally, double any literal '%' so cmd.exe emits it verbatim.
+        % This MUST happen after the mask restoration so that '>NUL' tokens
+        % cannot be contaminated, and after the caret-escaping so that a
+        % single '%' in the user input is doubled exactly once. cmd.exe
+        % does not accept '^%%' as an escape (caret is discarded inside
+        % variable-expansion parsing), so '%%%%' (doubling) is the only
+        % reliable way to emit a literal percent sign.
+        cmd = strrep(cmd, '%', '%%');
     end
     try
         if nargout > 1
