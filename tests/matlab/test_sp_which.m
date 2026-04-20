@@ -83,6 +83,20 @@ classdef test_sp_which < matlab.unittest.TestCase
             cleanupSpy = onCleanup(@() (rmpath(spyDir), rmdir(spyDir, 's')));
             tc.verifyWarningFree(@() sp_which('matlab'));
         end
+
+        function test_required_returns_path_when_found(tc)
+            % sp_which_required returns the same path sp_which returns
+            % on a hit; difference is only in the miss behaviour.
+            hit = sp_which('matlab');
+            tc.assumeNotEmpty(hit);
+            tc.verifyEqual(sp_which_required('matlab'), hit);
+        end
+
+        function test_required_throws_when_missing(tc)
+            tc.verifyError( ...
+                @() sp_which_required('this-binary-name-does-not-exist-anywhere'), ...
+                'StaMPS:sp_which:notFound');
+        end
     end
 end
 
