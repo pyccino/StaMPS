@@ -185,10 +185,10 @@ try {
   }
   catch( char * str ) {
      cout << str << "\n";
-     return(999);
+     return 1;
   }
   catch( ... ) {
-    return(999);
+    return 1;
   }
 
   return(0);
