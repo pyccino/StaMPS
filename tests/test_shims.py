@@ -189,12 +189,21 @@ def test_bat_propagates_nonzero_exit_code(stamps_root: Path, tmp_path: Path):
     stub_script = tmp_path / "stub_exit42.py"
     stub_script.write_text("import sys\nsys.exit(42)\n", encoding="ascii")
     # Wrapper .cmd that invokes the real Python on our stub and propagates
-    # its exit code. Uses %ERRORLEVEL% (parse-time) since the exit is at
-    # top level, not inside an if/for block — parse-time expansion is
-    # correct here. No setlocal needed.
+    # its exit code. The shim probes us with `-c "import sys; print(...)"`
+    # to detect Microsoft Store stubs, so the wrapper MUST dispatch -c to
+    # the real Python (otherwise the probe gets empty stdout and the shim
+    # bails before reaching the -m branch). The `if`-block needs delayed
+    # expansion (!errorlevel! not %ERRORLEVEL%) — see the docstring above.
     wrapper = tmp_path / "python_wrapper.cmd"
     wrapper.write_text(
-        f'@echo off\r\n"{sys.executable}" "{stub_script}"\r\nexit /b %ERRORLEVEL%\r\n',
+        "@echo off\r\n"
+        "setlocal enabledelayedexpansion\r\n"
+        'if /i "%~1"=="-c" (\r\n'
+        f'    "{sys.executable}" %*\r\n'
+        "    exit /b !errorlevel!\r\n"
+        ")\r\n"
+        f'"{sys.executable}" "{stub_script}"\r\n'
+        "exit /b %ERRORLEVEL%\r\n",
         encoding="ascii",
     )
     # The shim reads STAMPS_PYTHON from %APPDATA%\PHASE\python.txt. Point
