@@ -26,13 +26,54 @@ def _bash_exported_vars() -> set[str]:
     return set(pattern.findall(BASH_SCRIPT.read_text()))
 
 
+def _cmd_blank_assigned_vars() -> set[str]:
+    """Vars the .cmd leaves empty (directly or transitively).
+
+    Direct: `set "X="` — Windows treats empty-string assignment as
+    deletion, so X is absent from the environment. The .cmd uses these
+    as user-edits-this-line placeholders for installation-specific
+    roots (SAR, GETORB_BIN, etc.) that the bash file populates with
+    upstream Linux defaults.
+
+    Transitive: `set "X=%Y%"` (pure pass-through, no literal text)
+    where Y is itself blank — X also collapses to "" and gets
+    deleted (e.g. `set "MY_SAR=%SAR%"` with SAR blank).
+
+    The parity check must exempt both — they're absent from `set`
+    output by design.
+    """
+    text = SCRIPT.read_text()
+    blanks = set(re.findall(r'^\s*set\s+"([A-Za-z_][A-Za-z0-9_]*)="\s*$', text, re.MULTILINE))
+    pass_through = re.findall(
+        r'^\s*set\s+"([A-Za-z_][A-Za-z0-9_]*)=%([A-Za-z_][A-Za-z0-9_]*)%"\s*$',
+        text,
+        re.MULTILINE,
+    )
+    while True:
+        added = {x for x, y in pass_through if y in blanks} - blanks
+        if not added:
+            break
+        blanks |= added
+    return blanks
+
+
 @pytest.mark.windows_only
 @pytest.mark.skipif(sys.platform != "win32", reason="cmd.exe config is Windows-only")
 def test_cmd_sets_all_vars_when_invoked_via_cmd():
     """`cmd /c "call StaMPS_CONFIG.cmd && set"` must export every .bash var."""
     expected = _bash_exported_vars()
-    cmd = ["cmd", "/c", f'call "{SCRIPT}" && set']
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    # shell=True hands the string straight to cmd /c. List form
+    # (["cmd", "/c", '...']) fails on Windows: subprocess.list2cmdline
+    # quote-escapes the third element, then cmd /c's quote-strip pass
+    # mangles the result so the SCRIPT path is mis-parsed as part of the
+    # executable token, yielding "command not recognized".
+    proc = subprocess.run(
+        f'call "{SCRIPT}" && set',
+        capture_output=True,
+        text=True,
+        check=True,
+        shell=True,
+    )
 
     env: dict[str, str] = {}
     for line in proc.stdout.splitlines():
@@ -40,7 +81,12 @@ def test_cmd_sets_all_vars_when_invoked_via_cmd():
             k, _, v = line.partition("=")
             env[k.strip()] = v
 
-    missing = sorted(v for v in expected if v not in env)
+    # Windows env-var lookups are case-insensitive, and PATH is canonically
+    # `Path` in the Windows env table (cmd `set` echoes it that way). The
+    # bash file exports `PATH` (uppercase) — match by lower().
+    env_keys_ci = {k.lower() for k in env}
+    blank_slots = _cmd_blank_assigned_vars()
+    missing = sorted(v for v in expected if v not in blank_slots and v.lower() not in env_keys_ci)
     assert not missing, f"Env vars in .bash but missing from .cmd: {missing}"
 
 
@@ -70,8 +116,15 @@ def test_cmd_fails_when_not_invoked_via_cmd_exe():
 @pytest.mark.skipif(sys.platform != "win32", reason="cmd.exe config is Windows-only")
 def test_cmd_path_idempotent():
     """Calling the .cmd twice must not duplicate PATH entries."""
-    cmd = ["cmd", "/c", f'call "{SCRIPT}" && call "{SCRIPT}" && echo %PATH%']
-    proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    # shell=True (string form) — see test_cmd_sets_all_vars_when_invoked_via_cmd
+    # for why list form fails on cmd.exe quote-strip.
+    proc = subprocess.run(
+        f'call "{SCRIPT}" && call "{SCRIPT}" && echo %PATH%',
+        capture_output=True,
+        text=True,
+        check=True,
+        shell=True,
+    )
     # Last line of stdout is the echoed PATH.
     path_line = proc.stdout.strip().splitlines()[-1]
     entries = [p for p in path_line.split(";") if p]

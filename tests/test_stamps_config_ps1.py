@@ -38,6 +38,42 @@ def _bash_exported_vars() -> set[str]:
     return set(pattern.findall(BASH_SCRIPT.read_text()))
 
 
+def _ps1_blank_assigned_vars() -> set[str]:
+    """Vars the .ps1 leaves empty (directly or transitively).
+
+    Direct: `$env:X = ""` — PowerShell treats empty-string assignment
+    to `env:` as deletion. The .ps1 uses these as user-edits-this-line
+    placeholders for installation-specific roots that the bash file
+    populates with upstream Linux defaults.
+
+    Transitive: `$env:X = "$env:Y"` (pure pass-through, no literal
+    text) where Y is itself blank — X also collapses to "" and gets
+    deleted (e.g. `$env:MY_SAR = "$env:SAR"` with SAR blank).
+
+    The parity check must exempt both — they're absent from
+    `Get-ChildItem env:` by design.
+    """
+    text = SCRIPT.read_text()
+    blanks = set(
+        re.findall(
+            r'^\s*\$env:([A-Za-z_][A-Za-z0-9_]*)\s*=\s*""\s*$',
+            text,
+            re.MULTILINE,
+        )
+    )
+    pass_through = re.findall(
+        r'^\s*\$env:([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"\$env:([A-Za-z_][A-Za-z0-9_]*)"\s*$',
+        text,
+        re.MULTILINE,
+    )
+    while True:
+        added = {x for x, y in pass_through if y in blanks} - blanks
+        if not added:
+            break
+        blanks |= added
+    return blanks
+
+
 @pytest.mark.windows_only
 @pytest.mark.skipif(sys.platform != "win32", reason="PowerShell config is Windows-only")
 def test_ps1_sets_all_vars():
@@ -59,7 +95,13 @@ def test_ps1_sets_all_vars():
         entries = [entries]
     env = {e["Name"]: e["Value"] for e in entries}
 
-    missing = sorted(v for v in expected if v not in env)
+    # Windows env-var lookups are case-insensitive, and PATH is canonically
+    # `Path` in the Windows env table. Match by lower(). Vars the .ps1
+    # explicitly assigns to "" are placeholder slots that PowerShell
+    # auto-deletes on assignment — exempt them.
+    env_keys_ci = {k.lower() for k in env}
+    blank_slots = _ps1_blank_assigned_vars()
+    missing = sorted(v for v in expected if v not in blank_slots and v.lower() not in env_keys_ci)
     assert not missing, f"Env vars in .bash but missing from .ps1: {missing}"
 
 
