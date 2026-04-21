@@ -16,6 +16,7 @@ import stat
 import sys
 import time
 from pathlib import Path
+from typing import overload
 
 
 def _chmod_tree_writable(root: Path) -> None:
@@ -275,15 +276,21 @@ def append_glob(out_path: Path | str, pattern: Path | str, preamble: str | None 
         _write_bytes_with_retry(out, existing + body.encode("ascii"))
 
 
-def long_path(p: Path | str) -> Path:
+@overload
+def long_path(p: Path) -> Path: ...
+@overload
+def long_path(p: str) -> Path | str: ...
+def long_path(p: Path | str) -> Path | str:
     """On Windows, prepend \\\\?\\ to paths longer than 240 chars.
 
     Accepts ``str | Path`` filesystem paths only. URIs (``file://``,
     ``http://``, ``https://``) are not supported — callers must resolve
     those to filesystem paths before calling. As a defensive guard
-    against URI-shaped strings leaking in, we skip the forward-slash
-    normalization when the input starts with a URI scheme prefix or is
-    already ``\\\\?\\``-prefixed.
+    against URI-shaped strings leaking in, the URI is returned unchanged
+    (as ``str``); the check MUST fire BEFORE ``Path()`` construction
+    because ``WindowsPath("file:///C:/foo")`` destructively rewrites the
+    URI's forward slashes to backslashes — impossible to recover from
+    after the fact.
 
     Allows CreateFileW-based APIs (Python's pathlib on Windows uses wide API)
     to exceed the 260-char MAX_PATH limit. On non-Windows, returns as-is.
@@ -294,19 +301,15 @@ def long_path(p: Path | str) -> Path:
     code frequently hand us mixed-separator strings on Windows; the
     \\\\?\\ prefix requires native backslashes.
     """
+    if isinstance(p, str) and p.startswith(("file:", "http:", "https:", "\\\\?\\")):
+        return p
     p = Path(p)
     if os.name != "nt":
-        return p
-    s = str(p)
-    # Defensive: don't mangle URIs (file:///C:/..., http://..., etc.) or
-    # already-prefixed long paths. Forward slashes there carry meaning
-    # we must not rewrite.
-    if s.startswith(("file:", "http:", "https:", "\\\\?\\")):
         return p
     # Normalize forward slashes so UNC detection (\\) matches //server/share
     # and the final long-path prefix is well-formed (Windows \\?\ only
     # accepts backslash separators).
-    s = s.replace("/", "\\")
+    s = str(p).replace("/", "\\")
     if len(s) < 240:
         return p
     # Absolute paths only (relative paths can't use \\?\ prefix)
