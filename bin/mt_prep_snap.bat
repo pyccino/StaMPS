@@ -61,7 +61,20 @@ rem first invocation instead of running Python. `sys.executable` is an
 rem absolute path that still contains `\WindowsApps\`, so we (a) verify
 rem the interpreter can execute `import sys` and (b) reject any resolved
 rem path under \WindowsApps\.
-for /f "tokens=*" %%i in ('%PYTHON_EXE% -c "import sys; print(sys.executable)" 2^>nul') do set RESOLVED_PY=%%i
+rem
+rem Capture via temp file (NOT `for /f`): when PYTHON_EXE is a quoted .bat
+rem path (e.g. STAMPS_PYTHON pointing at a venv wrapper), `for /f` spawns
+rem `cmd /c ""C:\path\wrapper.bat" -c "..."` and the inner cmd's quote-strip
+rem pass mangles the executable token, producing "command not recognized".
+rem Plus: invoking a .bat without `call` lets its `exit /b` terminate this
+rem script, so `call` is required here AND in the -m delegation below.
+set "_TMPRES=%TEMP%\_stamps_resolved_%RANDOM%_%RANDOM%.txt"
+call %PYTHON_EXE% -c "import sys; print(sys.executable)" > "%_TMPRES%" 2>nul
+set "RESOLVED_PY="
+if exist "%_TMPRES%" (
+    set /p RESOLVED_PY=<"%_TMPRES%"
+    del /q "%_TMPRES%" 2>nul
+)
 if "!RESOLVED_PY!"=="" (
     echo ERROR: Python launcher at "!PYTHON_EXE!" failed to run "import sys". >&2
     echo This is typically the Microsoft Store stub. Install real Python 3.11+ from https://www.python.org. >&2
@@ -76,7 +89,7 @@ if !errorlevel! equ 0 (
     goto :_cleanup
 )
 
-%PYTHON_EXE% -m stamps.mt_prep_snap %*
+call %PYTHON_EXE% -m stamps.mt_prep_snap %*
 set "_RC=!errorlevel!"
 goto :_cleanup
 
