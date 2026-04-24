@@ -120,6 +120,9 @@ if ($env:MATLAB_EXE -and (Test-Path $env:MATLAB_EXE)) {
     }
 }
 
-Write-Host "StaMPS environment configured:"
-Write-Host "  STAMPS   = $env:STAMPS"
-Write-Host "  MATLAB   = $env:MATLAB_EXE"
+# Banner goes to stderr so callers parsing stdout (CI scripts, tests that
+# read $env:STAMPS or convert env: to JSON) see clean output. Interactive
+# users still see the banner because the terminal renders both streams.
+[Console]::Error.WriteLine("StaMPS environment configured:")
+[Console]::Error.WriteLine("  STAMPS   = $env:STAMPS")
+[Console]::Error.WriteLine("  MATLAB   = $env:MATLAB_EXE")
