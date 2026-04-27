@@ -174,11 +174,15 @@ def main(argv: list[str] | None = None) -> int:
         calamp_args.append(args.maskfile)
     subprocess.run(calamp_args, check=True)
 
-    # Append calamp.out to selfile.
+    # Append calamp.out to selfile. On Windows calamp.exe writes its stdout
+    # in C++ text mode (CRLF line endings); selpsc_patch's iostream `>>`
+    # parser leaves '\r' in the stream and downstream tokenization corrupts
+    # the next file path. Normalize CRLF -> LF on append so the C++ binaries
+    # (built without binary I/O on stdin) parse cleanly.
     calamp_out = workdir / "calamp.out"
     if calamp_out.exists():
         with open(selfile, "ab") as sf:
-            sf.write(calamp_out.read_bytes())
+            sf.write(calamp_out.read_bytes().replace(b"\r\n", b"\n"))
 
     # Patch tiling — csh `@` is truncating int div.
     width_p = _csh_int_div(width, args.prg)
