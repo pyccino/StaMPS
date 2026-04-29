@@ -32,6 +32,14 @@ bin/psclonlat
 bin/selpsc_patch
 bin/selsbc_patch
 bin/dismph
+# Windows .exe variants (built via CMake on Windows; distributed via the
+# windows-port-bins-v* git tags, not committed on the branch).
+bin/*.exe
+
+# MATLAB runtime artifacts produced inside a working PSI directory by
+# setparm/getparm/STAMPS sessions. Per-run state, not source.
+matlab/STAMPS.log
+matlab/parms.mat
 
 # Editor
 .vscode/
