@@ -57,26 +57,52 @@ ph_all(isnan(ph_all))=0;
 
 disp(sprintf('   Number of points per ifg: %d',n_ps))
 
-nodename=['scnfilt.1.node'];
-fid=fopen(nodename,'w');
-fprintf(fid,'%d 2 0 0\n',n_ps);
-
-for i=1:n_ps
-    fprintf(fid,'%d %f %f\n',i,ps.xy(i,2),ps.xy(i,3));
+% Windows-port guard: triangle.exe is not on PATH by default (only the
+% legacy Linux mt_prep_snap.bat shim sets it, for its own subprocess).
+% Use MATLAB's built-in delaunay() instead, mirroring the same pattern
+% already in ps_weed.m:293 and ps_smooth_scla.m:47.
+arch=computer('arch');
+if strcmpi(arch(1:3),'win')
+    use_triangle='n';
+else
+    tripath=sp_which('triangle');
+    if ~isempty(tripath)
+        use_triangle='y';
+    else
+        use_triangle='n';
+    end
 end
 
-fclose(fid);
+if use_triangle=='y'
+    nodename=['scnfilt.1.node'];
+    fid=fopen(nodename,'w');
+    fprintf(fid,'%d 2 0 0\n',n_ps);
 
-sp_system('triangle -e scnfilt.1.node > triangle_scn.log');
+    for i=1:n_ps
+        fprintf(fid,'%d %f %f\n',i,ps.xy(i,2),ps.xy(i,3));
+    end
 
-fid=fopen('scnfilt.2.edge','r');
-header=str2num(fgetl(fid));
-N=header(1);
-edges_nz=zeros(N,4);
-for i=1:N
-    edges_nz(i,:)=str2num(fgetl(fid));
+    fclose(fid);
+
+    sp_system('triangle -e scnfilt.1.node > triangle_scn.log');
+
+    fid=fopen('scnfilt.2.edge','r');
+    header=str2num(fgetl(fid));
+    N=header(1);
+    edges_nz=zeros(N,4);
+    for i=1:N
+        edges_nz(i,:)=str2num(fgetl(fid));
+    end
+    fclose(fid);
+else
+    xy=double(ps.xy);
+    tri=delaunay(xy(:,2),xy(:,3));
+    tr=triangulation(tri,xy(:,2),xy(:,3));
+    edgs=edges(tr);
+    N=size(edgs,1);
+    % edges_nz format expected downstream: [edge_id, v1, v2, boundary_marker]
+    edges_nz=[(1:N)', edgs, zeros(N,1)];
 end
-fclose(fid);
 
 %%% deramp end ifgs (unlike aps, orbit errors not so random and end
 %%% orbit errors can pass through the low-pass filter
