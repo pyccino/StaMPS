@@ -46,6 +46,14 @@ def _script_arg_for_run(script: Path, platform: str) -> str:
     return escape_matlab_string(s)
 
 
+def _script_dir_for_addpath(script: Path, platform: str) -> str:
+    """Return the script's parent directory escaped for MATLAB string literal."""
+    s = str(script.parent)
+    if platform == "win32" and not s.startswith("\\\\"):
+        s = s.replace("\\", "/")
+    return escape_matlab_string(s)
+
+
 def build_cmd(
     script: Path,
     log: Path,
@@ -56,18 +64,27 @@ def build_cmd(
     """Return (argv_list, mode).
 
     mode is one of: 'stdin' (Linux), 'batch' (Windows R2019a+), 'r' (fallback).
+
+    On Windows we invoke the script via ``addpath(...); <script_name>`` rather
+    than ``run('<abs path>')``. MATLAB's ``run()`` builtin internally ``cd``s to
+    the script's directory before executing and restores the caller's cwd
+    afterwards, but any relative-path I/O the script performs (e.g.
+    ``ps_parms_initial.m`` doing ``save('parms')``) lands in the script's
+    folder rather than the caller's cwd. Using ``addpath`` keeps cwd pinned to
+    the caller's directory throughout execution, which is what the original
+    csh pipeline (``matlab < script.m``) relied on.
     """
     plat = platform or sys.platform
     exe = str(matlab_exe) if matlab_exe else ("matlab.exe" if plat == "win32" else "matlab")
 
     if plat == "win32":
-        run_arg = _script_arg_for_run(script, plat)
+        script_dir = _script_dir_for_addpath(script, plat)
+        script_name = script.stem  # 'ps_parms_initial' from ps_parms_initial.m
+        invoke = f"addpath('{script_dir}'); {script_name}"
         if fallback_r:
-            r_code = (
-                f"try, run('{run_arg}'); catch e, " f"disp(getReport(e)); exit(1); end; exit(0);"
-            )
+            r_code = f"try, {invoke}; catch e, disp(getReport(e)); exit(1); end; exit(0);"
             return [exe, "-wait", "-nosplash", "-nodesktop", "-r", r_code], "r"
-        return [exe, "-batch", f"run('{run_arg}')"], "batch"
+        return [exe, "-batch", invoke], "batch"
 
     # Linux / macOS: stdin-redirected
     return [exe, "-nojvm", "-nosplash", "-nodisplay"], "stdin"

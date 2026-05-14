@@ -46,7 +46,11 @@ def test_build_cmd_windows_batch():
         matlab_exe=PureWindowsPath("matlab.exe"),
     )
     assert "-batch" in cmd
-    assert "run('C:/tmp/s.m')" in cmd[-1] or "run('C:\\tmp\\s.m')" in cmd[-1]
+    # We invoke via `addpath + bare script name`, not run('<abspath>'), to
+    # prevent run()'s cd-to-script-folder behavior from making relative-path
+    # I/O in the script (e.g. save('parms')) land in the script's dir.
+    assert "addpath('C:/tmp')" in cmd[-1] or "addpath('C:\\tmp')" in cmd[-1]
+    assert cmd[-1].rstrip().endswith("; s")
     assert mode == "batch"
 
 
@@ -57,8 +61,12 @@ def test_build_cmd_windows_unc_preserved():
         platform="win32",
         matlab_exe=PureWindowsPath("matlab.exe"),
     )
-    # UNC should pass as \\server\share\s.m (backslashes preserved)
-    assert r"\\server\share\s.m" in cmd[-1] or "//server/share/s.m" in cmd[-1]
+    # UNC parent must keep backslashes (not be slash-translated). PureWindowsPath
+    # may append a trailing backslash to the share root — accept either form.
+    assert (
+        r"addpath('\\server\share')" in cmd[-1]
+        or "addpath('\\\\server\\share\\')" in cmd[-1]
+    )
 
 
 def test_build_cmd_windows_apostrophe_escaped():
@@ -68,7 +76,7 @@ def test_build_cmd_windows_apostrophe_escaped():
         platform="win32",
         matlab_exe=PureWindowsPath("matlab.exe"),
     )
-    # Apostrophe in path must be doubled for MATLAB string literal
+    # Apostrophe in the addpath() argument must be doubled for MATLAB
     assert "Bob''s" in cmd[-1]
 
 
@@ -85,6 +93,9 @@ def test_build_cmd_r2016a_fallback():
     assert mode == "r"
     # Must include exit(0)/exit(1) discipline
     assert "exit(0)" in cmd[-1] or "exit(1)" in cmd[-1]
+    # Must use addpath + script name pattern (not run())
+    assert "addpath(" in cmd[-1]
+    assert "run(" not in cmd[-1]
 
 
 def test_find_matlab_from_env(monkeypatch, tmp_path: Path):
