@@ -45,6 +45,18 @@ function [status, out] = sp_system(cmd)
         cmd = regexprep(cmd, '>&\s*/dev/null\b', '>NUL 2>&1');
         cmd = regexprep(cmd, '2>\s*/dev/null\b', '2>NUL');
         cmd = regexprep(cmd, '\s>\s*/dev/null\b', ' >NUL');
+        % 1b) Recognise a trailing stdout redirect to a simple filename
+        %     token (e.g. '... > triangle_scn.log'). StaMPS' triangle/
+        %     unwrap callers use this pattern routinely with sp_system to
+        %     capture informational output. Without this rewrite the '>'
+        %     gets escaped to '^>' by step 2 below, the file is never
+        %     created, and triangle receives the redirect target as an
+        %     additional positional argument and aborts.
+        %     Constraint: filename token contains no whitespace and no
+        %     shell metacharacters (< > | " &) so we cannot mistake user
+        %     data for a redirect. The redirect must be at end-of-string.
+        MASK_RDOUT = char(4);
+        cmd = regexprep(cmd, '\s>\s*([^\s<>|"&]+)\s*$', [' ' MASK_RDOUT '$1']);
         % 2) Escape cmd.exe metacharacters that were not part of the
         %    rewrites. We deliberately skip characters already inside the
         %    injected redirection tokens ('>NUL', '2>NUL', '>NUL 2>&1') by
@@ -66,6 +78,7 @@ function [status, out] = sp_system(cmd)
         cmd = strrep(cmd, MASK_FULL, '>NUL 2>&1');
         cmd = strrep(cmd, MASK_ERR,  '2>NUL');
         cmd = strrep(cmd, MASK_OUT,  '>NUL');
+        cmd = strrep(cmd, MASK_RDOUT,'>');
         % Finally, double any literal '%' so cmd.exe emits it verbatim.
         % This MUST happen after the mask restoration so that '>NUL' tokens
         % cannot be contaminated, and after the caret-escaping so that a
