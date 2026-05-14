@@ -48,6 +48,17 @@ if isempty(ref_ps)
    if nargin ==1
        fprintf('None of your external data points have a reference, all are set as reference. \n')
        ref_ps=[1:ps2.n_ps]';
+   else
+       % nargin == 0: no PS matched the reference criteria (e.g. degenerate
+       % settings like ref_radius=0 from a GUI that defaults the field to
+       % zero). Fall back to using all PS as the reference, matching the
+       % behavior when ref_lon / ref_lat / ref_radius are left unbounded.
+       % Without this fallback, downstream callers (ps_calc_scla:161,
+       % ps_plot, ...) do `nanmean(uw.ph_uw([],:),1)` which is a NaN row
+       % and silently turns K_ps_uw / C_ps_uw / ph_scla entirely to NaN,
+       % poisoning the second-pass unwrap.
+       fprintf('No PS matched the reference criteria, all PS used as reference.\n')
+       ref_ps=[1:ps2.n_ps]';
    end
 end
 
