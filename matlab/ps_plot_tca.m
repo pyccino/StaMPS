@@ -22,8 +22,11 @@ if ischar(aps_flag)
    if strcmp(aps_flag,'a_linear')==1 || strcmp(aps_flag,'a_l')==1
        % aps topo correlated linear correction
        aps_flag=1;
-       
-       keyboard
+       % NOTE: upstream StaMPS leaves a literal `keyboard` here, almost
+       % certainly a dev-debug artefact (none of the ~30 sibling branches
+       % below have it). It drops the user into K>> mode in the middle of
+       % a fully-automated stamps()/ps_calc_scla flow, with no message,
+       % whenever subtr_tropo='y' + tropo_method='a_linear'. Removed.
    elseif strcmp(aps_flag,'a_powerlaw')==1 || strcmp(aps_flag,'a_p')==1
        % aps topo correlated powerlaw correction
        aps_flag=2;
