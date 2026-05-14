@@ -278,11 +278,15 @@ try {
 
   ofstream ijfile(ijname,ios::out);
   ijfile.imbue(std::locale::classic());
-  ofstream jifile(jiname,ios::out);
+  // [Windows fix] ios::binary required: jifile writes raw int32_t
+  // pairs. Text mode on Windows would translate 0x0A bytes inside
+  // the integer payload to 0x0D 0x0A.
+  ofstream jifile(jiname,ios::out|ios::binary);
   jifile.imbue(std::locale::classic());
   ofstream daoutfile(daoutname,ios::out);
   daoutfile.imbue(std::locale::classic());
-  ofstream meanoutfile(meanoutname,ios::out);
+  // [Windows fix] ios::binary required: mean_amp.flt is raw float.
+  ofstream meanoutfile(meanoutname,ios::out|ios::binary);
   meanoutfile.imbue(std::locale::classic());
 
   int LineInBuffer = 10;

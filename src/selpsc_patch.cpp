@@ -342,13 +342,18 @@ try {
 
   ofstream ijfile(ijname,ios::out);
   ijfile.imbue(std::locale::classic());
-  ofstream jifile(jiname,ios::out);
+  // [Windows fix] ios::binary required: jifile writes raw int32_t
+  // pairs. Text mode on Windows would translate any 0x0A byte in
+  // the integer payload to 0x0D 0x0A and corrupt the file.
+  ofstream jifile(jiname,ios::out|ios::binary);
   jifile.imbue(std::locale::classic());
   ofstream ijfile0(ijname0,ios::out);
   ijfile0.imbue(std::locale::classic());
   ofstream daoutfile(daoutname,ios::out);
   daoutfile.imbue(std::locale::classic());
-  ofstream meanoutfile(meanoutname,ios::out);
+  // [Windows fix] ios::binary required: mean_amp.flt is raw float
+  // (single precision per pixel). See note above.
+  ofstream meanoutfile(meanoutname,ios::out|ios::binary);
   meanoutfile.imbue(std::locale::classic());
 
   //complex<float>* buffer = new complex<float>[num_files*width]; // used to store 1 line of all amp files

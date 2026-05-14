@@ -87,7 +87,10 @@ try {
       throw "";
   }
 
-  ofstream outfile(outfilename,ios::out);
+  // [Windows fix] ios::binary required: outfile holds raw complex
+  // float interferogram phase samples. Text mode on Windows would
+  // translate LF bytes to CRLF and corrupt the binary stream.
+  ofstream outfile(outfilename,ios::out|ios::binary);
   outfile.imbue(std::locale::classic());
   if (! outfile.is_open())
   {

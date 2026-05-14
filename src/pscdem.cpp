@@ -95,7 +95,11 @@ try {
       throw "";
   }
 
-  ofstream outfile(outfilename,ios::out);
+  // [Windows fix] ios::binary required: outfile holds raw DEM
+  // pixel values (single precision). Without binary mode Windows
+  // text-mode translation corrupts the stream (LF -> CRLF) and
+  // inflates the file size.
+  ofstream outfile(outfilename,ios::out|ios::binary);
   outfile.imbue(std::locale::classic());
   if (! outfile.is_open())
   {

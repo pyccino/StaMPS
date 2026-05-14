@@ -99,7 +99,9 @@ int main(int  argc, char *argv[] )
 
     ofstream fpout;
     //cout << "opening " << outfile << "...\n";
-    fpout.open (outfile, ios::out);
+    // [Windows fix] ios::binary required: fpout holds raw complex<float>
+    // arrays. Text mode on Windows would corrupt the binary stream.
+    fpout.open (outfile, ios::out|ios::binary);
     fpout.imbue(std::locale::classic());
     if (! fpout.is_open())
     {

@@ -88,7 +88,13 @@ try {
       throw "";
   }
 
-  ofstream outfile(outfilename,ios::out);
+  // [Windows fix] ios::binary required: outfile holds raw floats
+  // (lon/lat pairs). Text mode on Windows translates 0x0A bytes to
+  // 0x0D 0x0A, corrupting the binary stream and inflating the file
+  // size. MATLAB-side ps_load_initial_gamma then reads (filesize/8)
+  // lon/lat pairs which no longer match n_ps from pscands.1.ij,
+  // failing at ps_load_initial_gamma:191 (xy concatenation).
+  ofstream outfile(outfilename,ios::out|ios::binary);
   outfile.imbue(std::locale::classic());
   if (! outfile.is_open())
   {
