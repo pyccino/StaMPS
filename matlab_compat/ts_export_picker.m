@@ -1,4 +1,4 @@
-function ts_export_picker(workdir, parent, value_type)
+function ts_export_picker(workdir, parent, value_type, export_name)
 %TS_EXPORT_PICKER Interactive picker for time-series export points.
 %   ts_export_picker(WORKDIR) opens a standalone uifigure with a
 %   satellite basemap showing every PS in
@@ -19,6 +19,12 @@ function ts_export_picker(workdir, parent, value_type)
 %   value_types: 'v', 'v-d', 'v-da', 'v-dao', etc. — must match the
 %   value_type passed to ps_plot('<vt>','ts',...).
 %
+%   ts_export_picker(WORKDIR, PARENT, VALUE_TYPE, EXPORT_NAME) writes
+%   the per-point CSVs into WORKDIR/EXPORT/<EXPORT_NAME>_<id>.csv
+%   (same folder and naming root as the legacy full-PS export from
+%   PHASE_StaMPS STEP 3). When EXPORT_NAME is empty the picker falls
+%   back to the legacy WORKDIR/ts_export/ts_<id>.csv layout.
+%
 %   Replaces the click-by-click ginput flow embedded in ps_plot's
 %   "TS plot" pushbutton (StaMPS/matlab/ps_plot.m:2218-2238).
 %
@@ -30,6 +36,9 @@ function ts_export_picker(workdir, parent, value_type)
     end
     if nargin < 3 || isempty(value_type)
         value_type = 'v-do';
+    end
+    if nargin < 4 || isempty(export_name)
+        export_name = '';
     end
 
     if ~license('test', 'Map_Toolbox')
@@ -151,6 +160,11 @@ function ts_export_picker(workdir, parent, value_type)
 
     bAdd = uibutton(rgl, 'Text', 'Add free point (click anywhere)...');
     bAdd.Layout.Row = 3;
+    bAdd.Tooltip = ['Drop a query point at the EXACT click location ' ...
+                    '(not snapped to a PS). Useful to query an area ' ...
+                    'where no PS sits exactly under the click — ' ...
+                    'combined with a non-zero radius_m, exports the ' ...
+                    'spatial mean of all PS within that radius.'];
     bAdd.ButtonPushedFcn = @on_add_click;
 
     bAddManual = uibutton(rgl, 'Text', 'Add manually (type coords)...');
@@ -172,14 +186,25 @@ function ts_export_picker(workdir, parent, value_type)
                         'new point. Override per-row in the table.']);
     radEdit = uieditfield(bgl, 'numeric', 'Value', 100, 'Limits', [1 1e6]);
 
-    bLoad = uibutton(bgl, 'Text', 'Load CSV');
+    bLoad = uibutton(bgl, 'Text', 'Load points list (CSV)');
+    bLoad.Tooltip = ['Reload a previously saved selection of query ' ...
+                     'points (id, lon, lat, radius_m) from a CSV. ' ...
+                     'Does NOT export time-series — only repopulates ' ...
+                     'the table above.'];
     bLoad.ButtonPushedFcn = @on_load;
 
-    bSave = uibutton(bgl, 'Text', 'Save CSV');
+    bSave = uibutton(bgl, 'Text', 'Save points list (CSV)');
+    bSave.Tooltip = ['Save the current query points (id, lon, lat, ' ...
+                     'radius_m) to a CSV file, to reuse the same ' ...
+                     'selection in a later run. Does NOT export ' ...
+                     'time-series.'];
     bSave.ButtonPushedFcn = @on_save;
 
     bRun = uibutton(bgl, 'Text', 'Run TS export', ...
                     'BackgroundColor', [0.4 0.7 0.4]);
+    bRun.Tooltip = ['Extract the actual time-series CSVs for each ' ...
+                    'point in the table above. Writes one file per ' ...
+                    'point into the EXPORT/ folder.'];
     bRun.ButtonPushedFcn = @on_run;
 
     statusLabel = uilabel(bgl, 'Text', '');
@@ -291,8 +316,16 @@ function ts_export_picker(workdir, parent, value_type)
     end
 
     function on_add_manual(~,~)
-        prompt_manual_entry(@(id, lon, lat, rad) ...
-            append_point(id, lon, lat, rad));
+        try
+            prompt_manual_entry(@(id, lon, lat, rad) ...
+                append_point(id, lon, lat, rad));
+        catch ME
+            % Closing the modal with the [X] button (or a build-time
+            % uifigure error in older/newer MATLAB) shouldn't dump a
+            % stack trace into the console. Status label gets the
+            % short version, picker keeps working.
+            statusLabel.Text = sprintf('Manual entry cancelled: %s', ME.message);
+        end
     end
 
     function append_point(id, lon, lat, rad)
@@ -419,12 +452,22 @@ function ts_export_picker(workdir, parent, value_type)
 
         tmp = [tempname '.csv'];
         cleaner = onCleanup(@() rm_if_exists(tmp));  %#ok<NASGU>
-        outdir = fullfile(workdir, 'ts_export');
+        % Land per-point CSVs into the same EXPORT/ folder used by the
+        % PHASE_StaMPS legacy "all-PS" export (STEP 3) so the user has
+        % a single place to look. When no export_name is provided
+        % (standalone picker invocation), fall back to ts_export/.
+        if ~isempty(export_name)
+            outdir = fullfile(workdir, 'EXPORT');
+            name_prefix = export_name;
+        else
+            outdir = fullfile(workdir, 'ts_export');
+            name_prefix = 'ts';
+        end
 
         try
             T = data_to_table(tbl.Data);
             writetable(T, tmp);
-            ts_export_batch(matfile, tmp, outdir, radEdit.Value);
+            ts_export_batch(matfile, tmp, outdir, radEdit.Value, name_prefix);
             statusLabel.Text = sprintf('Exported %d series → %s', ...
                                        height(T), outdir);
         catch ME
@@ -452,7 +495,8 @@ function ts_export_picker(workdir, parent, value_type)
     function prompt_manual_entry(on_ok)
         d = uifigure('Name', 'Add point manually', ...
                      'Position', [200 200 360 240], ...
-                     'WindowStyle', 'modal');
+                     'WindowStyle', 'modal', ...
+                     'CloseRequestFcn', @(src,~) delete(src));
         dgl = uigridlayout(d, [5 2]);
         dgl.RowHeight = {30, 30, 30, 30, 40};
         dgl.ColumnWidth = {120, '1x'};
@@ -466,9 +510,14 @@ function ts_export_picker(workdir, parent, value_type)
         uilabel(dgl, 'Text', 'lat (deg):');
         latEdit = uieditfield(dgl, 'numeric', 'Value', 0);
 
-        uilabel(dgl, 'Text', 'radius_m (NaN = default):');
-        radEditM = uieditfield(dgl, 'numeric', 'Value', NaN, ...
-                               'AllowEmpty', true);
+        % R2026a tightened uieditfield validation and rejects NaN as
+        % an initial Value, so we pre-fill with the picker's current
+        % default radius. The user can still edit the value before
+        % pressing OK.
+        default_rad = radEdit.Value;
+        uilabel(dgl, 'Text', sprintf('radius_m (default %g):', default_rad));
+        radEditM = uieditfield(dgl, 'numeric', 'Value', default_rad, ...
+                               'Limits', [1 1e6]);
 
         bgl2 = uigridlayout(dgl, [1 2]);
         bgl2.Layout.Row = 5; bgl2.Layout.Column = [1 2];

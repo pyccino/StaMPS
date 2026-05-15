@@ -1,4 +1,4 @@
-function ts_export_batch(matfile, points_csv, outdir, default_radius)
+function ts_export_batch(matfile, points_csv, outdir, default_radius, name_prefix)
 %TS_EXPORT_BATCH Headless time-series exporter for StaMPS PSI workdirs.
 %   ts_export_batch(MATFILE, POINTS_CSV, OUTDIR, DEFAULT_RADIUS) loads
 %   ph_mm/lonlat/day from MATFILE (a ps_plot_ts_*.mat written by
@@ -6,12 +6,20 @@ function ts_export_batch(matfile, points_csv, outdir, default_radius)
 %   with optional 4th col radius_m), and writes one
 %   <OUTDIR>/ts_<id>.csv per point with cols {date, disp_mm}.
 %
+%   ts_export_batch(..., NAME_PREFIX) overrides the 'ts' prefix in the
+%   output filename, so each point lands as <OUTDIR>/<NAME_PREFIX>_<id>.csv.
+%   Used by the picker to keep the per-point files in sync with the
+%   PHASE_StaMPS "Filename" field (legacy STEP 3 export).
+%
 %   Replaces the interactive ginput flow of ts_plot.m for batch / GUI
 %   driven workflows where the points are known a priori.
 %
 %   Requires StaMPS/matlab on the path for llh2local.
 
-    narginchk(4, 4);
+    narginchk(4, 5);
+    if nargin < 5 || isempty(name_prefix)
+        name_prefix = 'ts';
+    end
 
     if ~isfolder(outdir)
         mkdir(outdir);
@@ -61,7 +69,7 @@ function ts_export_batch(matfile, points_csv, outdir, default_radius)
 
         T = table(date_str, ts_mean, ...
                   'VariableNames', {'date', 'disp_mm'});
-        writetable(T, fullfile(outdir, sprintf('ts_%s.csv', id)));
+        writetable(T, fullfile(outdir, sprintf('%s_%s.csv', name_prefix, id)));
     end
 end
 
