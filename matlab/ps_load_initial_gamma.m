@@ -139,6 +139,7 @@ for i=1:n_ifg
     [ph_bit,byte_count]=fread(fid,[(n_ps)*2,1],'float=>single');
     ph(:,i)=complex(ph_bit(1:2:end),ph_bit(2:2:end));
 end
+fclose(fid);  % Windows port: upstream forgets to close pscands.1.ph; on Windows the lingering handle blocks the next mt_prep_snap rm of PATCH_*.
 
 zero_ph=sum(ph==0,2);
 nonzero_ix=zero_ph<=1;       % if more than 1 phase is zero, drop node

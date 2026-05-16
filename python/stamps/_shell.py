@@ -158,8 +158,21 @@ def rm_rf_glob(pattern: Path | str, retries: int = 3, backoff_s: float = 0.1) ->
             except FileNotFoundError:
                 # Matches the prior unlink(missing_ok=True) contract.
                 break
-            except PermissionError:
+            except PermissionError as exc:
                 if attempt == retries - 1:
+                    # Windows: a long-lived process (typically a MATLAB session
+                    # from a prior StaMPS run with a leaked fopen handle) is
+                    # holding a file under `victim`. Retry backoff cannot win
+                    # against a process that may hold the handle for hours.
+                    # Surface an actionable message instead of a raw traceback.
+                    if os.name == "nt":
+                        locked = getattr(exc, "filename", None) or str(victim)
+                        raise PermissionError(
+                            f"Cannot delete '{locked}' — the file is locked by another "
+                            f"process (typically a MATLAB session left open from a "
+                            f"previous StaMPS run). Close all MATLAB instances that "
+                            f"have processed this folder, then re-run."
+                        ) from exc
                     raise
                 time.sleep(backoff_s)
 
