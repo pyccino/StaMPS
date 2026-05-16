@@ -30,9 +30,29 @@ ExternalProject_Add(snaphu
     # drive its own build system directly. BINDIR=../bin keeps the binary
     # inside <SOURCE_DIR>/bin/, which INSTALL_COMMAND copies to our
     # install prefix.
+    # Windows-only source patches applied once after extract:
+    #   - NULLFILE "/dev/null" → "NUL" in snaphu.h
+    #   - fopen mode promotion to binary ("r" → "rb" etc.) in every .c
+    # Done as a CMake script so it runs identically under any host shell.
+    PATCH_COMMAND ${CMAKE_COMMAND} -DSNAPHU_SRC_DIR=<SOURCE_DIR>/src
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/win-compat/patch_winio.cmake
+
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
+    # snaphu's Makefile defaults CC=cc, which MinGW does not ship — override to
+    # gcc. Static link removes the MinGW runtime DLL dependency, so the .exe
+    # can be dropped into a clean Windows install (matches how the other 8
+    # StaMPS Windows binaries are built).
+    #
+    # On MinGW we shim the POSIX-only <sys/wait.h> and <sys/resource.h> with
+    # stub headers under win-compat/. snaphu's fork/wait/getrusage paths are
+    # only hit when tile-parallel mode is requested; StaMPS never asks for it,
+    # so the stubs are safe (they fail loudly if ever called).
     BUILD_COMMAND ${MAKE_EXECUTABLE} -C <SOURCE_DIR>/src
+        CC=gcc
+        "CFLAGS=-O3 -Wall -I${CMAKE_CURRENT_SOURCE_DIR}/win-compat -include ${CMAKE_CURRENT_SOURCE_DIR}/win-compat/snaphu_winshim.h -Wno-error=incompatible-pointer-types -Wno-error=implicit-function-declaration -Wno-builtin-declaration-mismatch"
+        LDFLAGS=-static
+        "LIBS=-lm -lkernel32 -lws2_32"
 
     # Copy the produced binary + README into INSTALL_DIR. On MinGW gcc
     # adds a .exe extension, so copy the whole bin/ directory contents

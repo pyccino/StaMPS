@@ -121,6 +121,13 @@ fprintf(fid,'COSTINFILE snaphu.costinfile\n');
 fprintf(fid,'STATCOSTMODE  DEFO\n');
 fprintf(fid,'INFILEFORMAT  COMPLEX_DATA\n');
 fprintf(fid,'OUTFILEFORMAT FLOAT_DATA\n');
+% Put LINELENGTH in the config so we don't need to pass `ncol` on the
+% command line. Upstream relied on `snaphu -d -f conf <ncol>` where the
+% trailing positional is taken as the linelength; on Windows the same
+% command is paired with `>& snaphu.log` (UNIX redirect, see below) which
+% cmd.exe cannot parse, and the whole invocation degrades to "multiple
+% input files: snaphu.in and <ncol>" — leaving snaphu.out unproduced.
+fprintf(fid,'LINELENGTH    %d\n',ncol);
 fclose(fid);
 
 
@@ -151,10 +158,16 @@ for i1=subset_ifg_index
     fclose(fid);
     ifgw=reshape(uw.ph(Z,i1),nrow,ncol);
     writecpx('snaphu.in',ifgw)
-    cmdstr=['snaphu -d -f snaphu.conf ',num2str(ncol),' >& snaphu.log'];
-    
-    
-    [a,b] =system(cmdstr);
+    % Cross-platform invocation: linelength comes from the conf (LINELENGTH
+    % key written above), and snaphu's stdout/stderr go to the MATLAB return
+    % value [a,b] instead of the UNIX `>&` redirect that cmd.exe rejects.
+    % The log file is then written from MATLAB itself if needed for debugging.
+    cmdstr='snaphu -d -f snaphu.conf';
+    [a,b]=system(cmdstr);
+    if a ~= 0
+        fid_log=fopen('snaphu.log','w'); fprintf(fid_log,'%s',b); fclose(fid_log);
+        error('snaphu invocation failed (exit %d). See snaphu.log.\nCMD: %s\n%s', a, cmdstr, b);
+    end
     fid=fopen('snaphu.out');
     ifguw=fread(fid,[ncol,inf],'float');
     fclose(fid);

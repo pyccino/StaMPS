@@ -230,13 +230,14 @@ if unwrap_hold_good_values=='y'
     options.ph_uw_predef=options.ph_uw_predef(:,unwrap_ifg_index);
 end
 
-arch=computer('arch');
-if ~strcmpi(arch(1:3),'win')
-    [ph_uw_some,msd_some]=uw_3d(ph_w(:,unwrap_ifg_index),ps.xy,day,ifgday_ix(unwrap_ifg_index,:),ps.bperp(unwrap_ifg_index),options);
-else
-    logit('Windows detected: using old unwrapping code without statistical cost processing')
-    [ph_uw_some]=uw_nosnaphu(ph_w(:,unwrap_ifg_index),ps.xy,day,options);
-end
+% Windows historically fell back to uw_nosnaphu because snaphu.exe wasn't
+% bundled — that fallback's space-domain solver (uw_unwrap_space) can loop
+% forever on sparse/disconnected PS graphs. The Windows port now ships a
+% MinGW-built static snaphu.exe (StaMPS/external/snaphu/bin/), so uw_3d's
+% statistical-cost path runs on Windows too. PHASE_StaMPS.mlapp's startupFcn
+% prepends external\snaphu\bin to the MATLAB process PATH, so the
+% system('snaphu ...') call in uw_stat_costs.m resolves.
+[ph_uw_some,msd_some]=uw_3d(ph_w(:,unwrap_ifg_index),ps.xy,day,ifgday_ix(unwrap_ifg_index,:),ps.bperp(unwrap_ifg_index),options);
 
 
     
